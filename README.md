@@ -1,46 +1,90 @@
-# Waseem Ansari — Portfolio
+# Waseem Ahmad Ansari
 
-Personal portfolio site for Waseem Ansari, Computer Engineer (B.E.) —
-software engineering, QA, and AI & search evaluation.
+**Senior Software Engineer · AI & LLM Quality Evaluator · Search Evaluator**
 
-**Live:** https://waseemwdd0165-jpg.github.io
+Computer Engineer (B.E.) with nine years building software, web, and mobile
+applications, and seven years evaluating the search and AI systems that shape
+what people find online.
 
-## How to publish an update
+Based in Mumbai, India (IST). Open to remote and on-site roles.
 
-1. Open https://github.com/waseemwdd0165-jpg/waseemwdd0165-jpg.github.io/upload/main
-2. Select **everything** in this folder and drag it onto the page
-3. Click **Commit changes**, and confirm overwriting existing files
+🌐 [Portfolio](https://waseemwdd0165-jpg.github.io) &nbsp;·&nbsp;
+💼 [LinkedIn](https://www.linkedin.com/in/waseem-ahmad-ansari-bba5771ab/) &nbsp;·&nbsp;
+📧 Waseemwdd0165@gmail.com &nbsp;·&nbsp;
+📱 +91 92703 04741
 
-That's the whole process. The folder is the website — no build step, no
-staging copy, no files to leave behind. Give it a minute, then reload the
-live URL.
+---
 
-## What's here
+## 🔧 What I do
 
-| File | |
+I build software and I evaluate it. Knowing how a search stack or a language
+model pipeline is put together makes for sharper judgement of what it produces —
+and years of assessing that output against detailed guidelines make for more
+careful engineering.
+
+**Engineering** — application development across desktop, web, and mobile;
+front-end and back-end integration; functional and non-functional QA; Agile
+delivery; mentoring and coding standards.
+
+**AI & search evaluation** — RLHF response ranking and preference data; red
+teaming for unsafe and policy-violating output; hallucination and factuality
+checking; prompt engineering and SFT data authoring; search and ads relevance
+rating; multilingual evaluation and localization.
+
+---
+
+## 🛠️ Tech stack
+
+| | |
 |---|---|
-| `index.html` | The portfolio site |
-| `app.css` | Shared styling for the four tools — must be uploaded with them |
-| `llm-evaluator.html` | RLHF preference rating: side-by-side scoring, gold-label agreement, JSONL export |
-| `search-rater.html` | Search quality rating: Needs Met and Page Quality scales, CSV export |
-| `prompt-workbench.html` | Prompt versioning with automated checks across a fixed test set |
-| `annotation-tool.html` | Span labelling for NER data, with inter-annotator agreement |
-| `Waseem-Ansari-CV.pdf` | CV, served by the download button on the site |
-| `.nojekyll` | Tells GitHub Pages to serve the files as-is |
+| **Languages** | Python · C# · Java · C · C++ · JavaScript · SQL · PL/SQL |
+| **Web & frameworks** | .NET / .NET Core · ASP.NET Core · Entity Framework · MVC · HTML · CSS |
+| **Databases** | Oracle (DBA & PL/SQL) · MySQL · MariaDB · Stored procedures |
+| **Tools** | Git · Docker |
 
-The four tools run entirely in the browser on built-in sample data. No API
-key, no server, no build.
+---
 
-### Not part of the website
+## 🚀 Projects
 
-`source/` and `originals/` upload harmlessly and are never served.
+Four working tools, each built around a real evaluation workflow. All run in the
+browser on sample data — no API key, no server.
 
-- `source/Waseem-Ansari-CV.docx` — editable CV. Edit here, then export a new PDF over the one above.
-- `source/build_cv.py` — regenerates the CV from scratch.
-- `source/waseem-portfolio-artifact.html` — the Claude-hosted copy of the site.
-- `originals/` — the original CV and BE degree certificate as supplied.
+| Project | What it demonstrates |
+|---|---|
+| [LLM Response Evaluator](https://waseemwdd0165-jpg.github.io/llm-evaluator.html) | Side-by-side rubric scoring, forced preference choice, gold-label agreement, JSONL export — the RLHF preference-data loop |
+| [Search Relevance Rater](https://waseemwdd0165-jpg.github.io/search-rater.html) | Needs Met and Page Quality rating against written guidelines, keyboard-driven, CSV export |
+| [Prompt Testing Workbench](https://waseemwdd0165-jpg.github.io/prompt-workbench.html) | Prompt versions run against a fixed test set with automated checks, including a prompt-injection case |
+| [Text Annotation Tool](https://waseemwdd0165-jpg.github.io/annotation-tool.html) | Span labelling for NER data with live inter-annotator agreement against a gold standard |
 
-## Still to confirm
+---
 
-The CV's **Languages** line reads English, Hindi, Urdu, Marathi. That was
-inferred from the localization work, not supplied — correct it if wrong.
+## 💼 Experience
+
+**Senior Software Engineer** — Net Tech Services India Pvt. Ltd, Mumbai · *Jan 2017 – Mar 2025*
+
+- Contributed to the nationwide Cheque Truncation System (CTS) rollout for core banking — a regulated, high-availability environment where a failed deployment stops branch operations
+- Designed, built, and shipped applications, websites, and mobile apps for clients, from architecture through deployment
+- Led front-end and back-end integration; ran functional and non-functional QA
+- Mentored junior developers and helped set coding standards across the team
+
+**Support Executive Officer** — Net Tech Services India Pvt. Ltd · *2016*
+
+**AI & LLM Quality Evaluator · Search Evaluator · Localization Analyst** — Freelance · *2018 – Present*
+
+- Rank competing model responses to produce preference data behind RLHF, applying written rubrics consistently at volume
+- Red-team models for unsafe, biased, and policy-violating output
+- Check model claims against sources to catch hallucinations and fabricated citations
+- Evaluate output across multiple languages; test chatbots and voice assistants
+- Rate search results and digital ads against quality guidelines
+
+---
+
+## 🎓 Education
+
+**B.E. Computer Engineering** — University of Mumbai, Rizvi College of Engineering
+Examination May 2015 · Convocation January 2017
+
+---
+
+<sub>Open to full-time, contract, and freelance work.
+Reach me at Waseemwdd0165@gmail.com.</sub>
