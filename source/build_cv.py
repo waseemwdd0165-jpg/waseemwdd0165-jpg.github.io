@@ -132,8 +132,9 @@ run(p, "Computer Engineer (B.E.) with nine years as a senior software engineer b
        "that shape what people find online. The two sides feed each other: knowing how a search stack "
        "or a language model pipeline is put together makes for sharper judgement of what it produces, "
        "and years of assessing that output against detailed guidelines make for more careful engineering. "
-       "Comfortable across front-end and back-end development, functional and non-functional QA, "
-       "LLM evaluation and alignment work, prompt engineering, and multilingual localization. "
+       "Builds in C#/.NET, Python, and Java against Oracle and MySQL back ends, and works across "
+       "front-end and back-end development, functional and non-functional QA, LLM evaluation and "
+       "alignment, prompt engineering, and multilingual localization. "
        "Based in Mumbai and open to remote or on-site work.")
 
 # =====================================================================
@@ -142,6 +143,12 @@ run(p, "Computer Engineer (B.E.) with nine years as a senior software engineer b
 heading("Core Competencies")
 
 skills = [
+    ("Programming Languages",
+     "Python · C# · Java · C · C++ · JavaScript · SQL · PL/SQL"),
+    ("Web & Frameworks",
+     ".NET / .NET Core · ASP.NET Core · Entity Framework · MVC · HTML · CSS · JavaScript"),
+    ("Databases & Tools",
+     "Oracle (DBA & PL/SQL) · MySQL · MariaDB · Stored procedures · Git · Docker"),
     ("Software Engineering & QA",
      "Software engineering · Desktop applications · Application implementation · Functional & "
      "non-functional testing · UI development · Agile delivery · Code standards & mentoring"),
