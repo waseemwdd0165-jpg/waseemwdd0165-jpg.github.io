@@ -165,7 +165,10 @@ section:first-child{border-top:none;padding-top:0}
   display:flex;flex-direction:column;gap:9px;min-height:168px;box-shadow:var(--shadow);
   transition:border-color .18s ease,transform .18s ease;
 }
+.card{text-decoration:none;color:inherit}
 .card:hover{border-color:var(--accent);transform:translateY(-2px)}
+.card:hover h3{color:var(--accent)}
+.card h3{transition:color .18s ease}
 .card .idx{font-family:"IBM Plex Mono",monospace;font-size:.72rem;color:var(--muted)}
 .card h3{font-size:1rem;font-weight:600}
 .card p{margin:0;font-size:.88rem;color:var(--muted);flex:1}
@@ -367,32 +370,31 @@ footer{
     <section id="projects">
       <div class="section-head"><span class="eyebrow">03</span><h2>Selected work</h2></div>
       <div class="grid">
-        <article class="card">
-          <div class="idx">Project 01</div>
-          <h3>Add a project title</h3>
-          <p>A short note on what this was, who it was built for, and what it changed.</p>
-          <div class="foot">Stack · Role · Year</div>
-        </article>
-        <article class="card">
-          <div class="idx">Project 02</div>
-          <h3>Add a project title</h3>
-          <p>A short note on what this was, who it was built for, and what it changed.</p>
-          <div class="foot">Stack · Role · Year</div>
-        </article>
-        <article class="card">
-          <div class="idx">Project 03</div>
-          <h3>Add a project title</h3>
-          <p>A short note on what this was, who it was built for, and what it changed.</p>
-          <div class="foot">Stack · Role · Year</div>
-        </article>
-        <article class="card">
-          <div class="idx">Project 04</div>
-          <h3>Add a project title</h3>
-          <p>A short note on what this was, who it was built for, and what it changed.</p>
-          <div class="foot">Stack · Role · Year</div>
-        </article>
+        <a class="card" href="llm-evaluator.html">
+          <div class="idx">Evaluation tooling</div>
+          <h3>LLM Response Evaluator</h3>
+          <p>Side-by-side model comparison with rubric scoring, forced preference choice, agreement tracking against gold labels, and JSONL export &mdash; the RLHF preference-data loop as a working tool.</p>
+          <div class="foot">HTML &middot; CSS &middot; JavaScript</div>
+        </a>
+        <a class="card" href="search-rater.html">
+          <div class="idx">Search quality</div>
+          <h3>Search Relevance Rater</h3>
+          <p>Rate results against Needs Met and Page Quality scales with stated query intent, keyboard-driven navigation, and CSV export. Sample set includes a YMYL query.</p>
+          <div class="foot">HTML &middot; CSS &middot; JavaScript</div>
+        </a>
+        <a class="card" href="prompt-workbench.html">
+          <div class="idx">Prompt engineering</div>
+          <h3>Prompt Testing Workbench</h3>
+          <p>Three versions of a support-triage prompt run against a fixed test set, scored by automatic checks. Shows how output schemas and guardrails close specific failures.</p>
+          <div class="foot">HTML &middot; CSS &middot; JavaScript</div>
+        </a>
+        <a class="card" href="annotation-tool.html">
+          <div class="idx">Data operations</div>
+          <h3>Text Annotation Tool</h3>
+          <p>Keyboard-first span labelling for NER training data, with a five-label schema, live inter-annotator agreement against a gold standard, and JSONL export.</p>
+          <div class="foot">HTML &middot; CSS &middot; JavaScript</div>
+        </a>
       </div>
-      <p class="hint">These are placeholders for now &mdash; real project write-ups coming soon.</p>
     </section>
 
     <section id="credentials">

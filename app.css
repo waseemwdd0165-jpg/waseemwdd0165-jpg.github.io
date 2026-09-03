@@ -1,0 +1,126 @@
+/* Shared design system for Waseem Ansari's evaluation tools
+   Matches the portfolio site: IBM Plex + Bricolage Grotesque, periwinkle accent. */
+
+:root{
+  --ground:#0B0D14;
+  --surface:#141824;
+  --surface-2:#1B2030;
+  --surface-3:#232838;
+  --line:#262C3D;
+  --text:#E9EAF0;
+  --muted:#8B93A9;
+  --accent:#8AA6FF;
+  --accent-soft:rgba(138,166,255,.13);
+  --good:#5FD3A6;
+  --good-soft:rgba(95,211,166,.13);
+  --warn:#E5C58E;
+  --warn-soft:rgba(229,197,142,.13);
+  --bad:#F08B7E;
+  --bad-soft:rgba(240,139,126,.13);
+  --shadow:0 1px 0 rgba(255,255,255,.03) inset;
+}
+@media (prefers-color-scheme: light){
+  :root:not([data-theme="dark"]){
+    --ground:#F7F7FA; --surface:#FFFFFF; --surface-2:#F0F1F6; --surface-3:#E7E9F0;
+    --line:#DEE0E9; --text:#141824; --muted:#5C6479; --accent:#3B5BD9;
+    --accent-soft:rgba(59,91,217,.09);
+    --good:#1F8A63; --good-soft:rgba(31,138,99,.10);
+    --warn:#8A6A28; --warn-soft:rgba(138,106,40,.10);
+    --bad:#C4453A; --bad-soft:rgba(196,69,58,.10);
+    --shadow:0 1px 2px rgba(20,24,36,.05);
+  }
+}
+:root[data-theme="light"]{
+  --ground:#F7F7FA; --surface:#FFFFFF; --surface-2:#F0F1F6; --surface-3:#E7E9F0;
+  --line:#DEE0E9; --text:#141824; --muted:#5C6479; --accent:#3B5BD9;
+  --accent-soft:rgba(59,91,217,.09);
+  --good:#1F8A63; --good-soft:rgba(31,138,99,.10);
+  --warn:#8A6A28; --warn-soft:rgba(138,106,40,.10);
+  --bad:#C4453A; --bad-soft:rgba(196,69,58,.10);
+  --shadow:0 1px 2px rgba(20,24,36,.05);
+}
+
+*{box-sizing:border-box}
+body{
+  margin:0;background:var(--ground);color:var(--text);
+  font-family:"IBM Plex Sans",system-ui,-apple-system,"Segoe UI",sans-serif;
+  font-size:15px;line-height:1.6;-webkit-font-smoothing:antialiased;
+}
+h1,h2,h3{font-family:"Bricolage Grotesque","IBM Plex Sans",system-ui,sans-serif;
+  margin:0;line-height:1.1;letter-spacing:-.02em;text-wrap:balance}
+a{color:var(--accent)}
+.mono{font-family:"IBM Plex Mono",ui-monospace,SFMono-Regular,Menlo,monospace}
+.eyebrow{font-family:"IBM Plex Mono",ui-monospace,monospace;font-size:.7rem;
+  letter-spacing:.16em;text-transform:uppercase;color:var(--muted)}
+
+/* ---------- shell ---------- */
+.wrap{max-width:1140px;margin:0 auto;padding:0 clamp(16px,3vw,32px)}
+.topbar{border-bottom:1px solid var(--line);background:var(--surface);position:sticky;top:0;z-index:20}
+.topbar .wrap{display:flex;align-items:center;gap:18px;flex-wrap:wrap;padding-top:14px;padding-bottom:14px}
+.brand{display:flex;flex-direction:column;gap:2px;margin-right:auto;min-width:0}
+.brand h1{font-size:1.12rem;font-weight:600}
+.brand .sub{font-size:.8rem;color:var(--muted)}
+.backlink{font-family:"IBM Plex Mono",monospace;font-size:.72rem;letter-spacing:.1em;
+  text-transform:uppercase;color:var(--muted);text-decoration:none;transition:color .18s}
+.backlink:hover{color:var(--accent)}
+main{padding:clamp(20px,3.5vh,34px) 0 80px}
+
+/* ---------- controls ---------- */
+.btn{
+  font-family:"IBM Plex Mono",monospace;font-size:.75rem;letter-spacing:.08em;text-transform:uppercase;
+  padding:9px 15px;border-radius:3px;border:1px solid var(--line);background:var(--surface);
+  color:var(--text);cursor:pointer;transition:border-color .18s,background .18s;white-space:nowrap;
+}
+.btn:hover:not(:disabled){border-color:var(--accent);background:var(--accent-soft)}
+.btn:disabled{opacity:.42;cursor:not-allowed}
+.btn.primary{background:var(--accent-soft);border-color:var(--accent);color:var(--accent)}
+.btn.sm{padding:6px 11px;font-size:.68rem}
+.row{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+
+input,textarea,select{
+  font-family:inherit;font-size:.92rem;color:var(--text);background:var(--surface);
+  border:1px solid var(--line);border-radius:3px;padding:9px 11px;width:100%;
+}
+textarea{resize:vertical;line-height:1.55}
+input:focus,textarea:focus,select:focus{outline:2px solid var(--accent);outline-offset:1px;border-color:var(--accent)}
+label{font-family:"IBM Plex Mono",monospace;font-size:.68rem;letter-spacing:.12em;
+  text-transform:uppercase;color:var(--muted);display:block;margin-bottom:5px}
+
+/* ---------- surfaces ---------- */
+.card{background:var(--surface);border:1px solid var(--line);border-radius:5px;box-shadow:var(--shadow)}
+.pad{padding:18px}
+.panel-head{display:flex;align-items:center;justify-content:space-between;gap:12px;
+  padding:12px 18px;border-bottom:1px solid var(--line);flex-wrap:wrap}
+.panel-head h2{font-size:.95rem;font-weight:600}
+
+.pill{
+  display:inline-flex;align-items:center;gap:6px;font-family:"IBM Plex Mono",monospace;
+  font-size:.68rem;letter-spacing:.09em;text-transform:uppercase;padding:3px 9px;
+  border-radius:100px;border:1px solid var(--line);background:var(--surface-2);color:var(--muted);
+}
+.pill.accent{border-color:var(--accent);background:var(--accent-soft);color:var(--accent)}
+.pill.good{border-color:var(--good);background:var(--good-soft);color:var(--good)}
+.pill.warn{border-color:var(--warn);background:var(--warn-soft);color:var(--warn)}
+.pill.bad{border-color:var(--bad);background:var(--bad-soft);color:var(--bad)}
+
+.note{font-size:.84rem;color:var(--muted)}
+.empty{padding:40px 20px;text-align:center;color:var(--muted);font-size:.9rem}
+
+/* ---------- data ---------- */
+table{width:100%;border-collapse:collapse;font-size:.88rem}
+th,td{text-align:left;padding:9px 12px;border-bottom:1px solid var(--line);vertical-align:top}
+th{font-family:"IBM Plex Mono",monospace;font-size:.66rem;letter-spacing:.12em;
+  text-transform:uppercase;color:var(--muted);font-weight:400}
+td.num{font-variant-numeric:tabular-nums}
+.scroll-x{overflow-x:auto}
+
+.kbd{
+  font-family:"IBM Plex Mono",monospace;font-size:.68rem;background:var(--surface-3);
+  border:1px solid var(--line);border-bottom-width:2px;border-radius:3px;padding:1px 6px;color:var(--muted);
+}
+
+.bar{height:6px;background:var(--surface-3);border-radius:100px;overflow:hidden}
+.bar > span{display:block;height:100%;background:var(--accent);border-radius:100px;transition:width .3s ease}
+
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px;border-radius:2px}
+@media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
