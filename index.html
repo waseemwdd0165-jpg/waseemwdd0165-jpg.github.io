@@ -207,7 +207,9 @@ section:first-child{border-top:none;padding-top:0}
 .card .idx{font-family:"IBM Plex Mono",monospace;font-size:.72rem;color:var(--muted)}
 .card h3{font-size:1rem;font-weight:600}
 .card p{margin:0;font-size:.88rem;color:var(--muted);flex:1}
-.card .foot{font-family:"IBM Plex Mono",monospace;font-size:.72rem;color:var(--sand)}
+.card .foot{font-family:"IBM Plex Mono",monospace;font-size:.72rem;color:var(--sand);display:flex;align-items:center;justify-content:space-between;gap:12px}
+.card .foot::after{content:"Open \2192";color:var(--accent);opacity:.55;letter-spacing:.06em;transition:opacity .2s ease,transform .2s ease}
+.card:hover .foot::after{opacity:1;transform:translateX(3px)}
 .hint{margin-top:14px;font-size:.82rem;color:var(--muted);font-style:italic}
 
 /* credential */
@@ -406,7 +408,7 @@ footer{
     </section>
 
     <section id="projects">
-      <div class="section-head"><span class="eyebrow">03</span><h2>Selected work</h2></div>
+      <div class="section-head"><span class="eyebrow">03</span><h2>Projects</h2></div>
       <div class="grid">
         <a class="card" href="llm-evaluator.html">
           <div class="idx">Evaluation tooling</div>

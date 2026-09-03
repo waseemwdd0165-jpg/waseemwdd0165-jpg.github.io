@@ -1,51 +1,50 @@
-/* Shared design system for Waseem Ansari's evaluation tools
-   Matches the portfolio site: IBM Plex + Bricolage Grotesque, periwinkle accent. */
-
 :root{
-  --ground:#0B0D14;
-  --surface:#141824;
-  --surface-2:#1B2030;
+  --ground:#080A11;
+  --surface:rgba(18,22,33,.62);
+  --surface-solid:#121621;
+  --surface-2:rgba(25,30,44,.72);
   --surface-3:#232838;
-  --line:#262C3D;
-  --text:#E9EAF0;
-  --muted:#8B93A9;
+  --line:#232939;
+  --line-soft:#1B2130;
+  --text:#EDEEF4;
+  --muted:#8992A8;
   --accent:#8AA6FF;
-  --accent-soft:rgba(138,166,255,.13);
+  --accent-2:#B79BFF;
+  --accent-soft:rgba(138,166,255,.12);
   --good:#5FD3A6;
   --good-soft:rgba(95,211,166,.13);
   --warn:#E5C58E;
   --warn-soft:rgba(229,197,142,.13);
   --bad:#F08B7E;
   --bad-soft:rgba(240,139,126,.13);
-  --shadow:0 1px 0 rgba(255,255,255,.03) inset;
-}
-@media (prefers-color-scheme: light){
-  :root:not([data-theme="dark"]){
-    --ground:#F7F7FA; --surface:#FFFFFF; --surface-2:#F0F1F6; --surface-3:#E7E9F0;
-    --line:#DEE0E9; --text:#141824; --muted:#5C6479; --accent:#3B5BD9;
-    --accent-soft:rgba(59,91,217,.09);
-    --good:#1F8A63; --good-soft:rgba(31,138,99,.10);
-    --warn:#8A6A28; --warn-soft:rgba(138,106,40,.10);
-    --bad:#C4453A; --bad-soft:rgba(196,69,58,.10);
-    --shadow:0 1px 2px rgba(20,24,36,.05);
-  }
-}
-:root[data-theme="light"]{
-  --ground:#F7F7FA; --surface:#FFFFFF; --surface-2:#F0F1F6; --surface-3:#E7E9F0;
-  --line:#DEE0E9; --text:#141824; --muted:#5C6479; --accent:#3B5BD9;
-  --accent-soft:rgba(59,91,217,.09);
-  --good:#1F8A63; --good-soft:rgba(31,138,99,.10);
-  --warn:#8A6A28; --warn-soft:rgba(138,106,40,.10);
-  --bad:#C4453A; --bad-soft:rgba(196,69,58,.10);
-  --shadow:0 1px 2px rgba(20,24,36,.05);
+  --shadow:0 1px 0 rgba(255,255,255,.04) inset, 0 18px 40px -28px rgba(0,0,0,.9);
 }
 
 *{box-sizing:border-box}
+html{background:var(--ground)}
 body{
-  margin:0;background:var(--ground);color:var(--text);
+  margin:0;position:relative;background:var(--ground);color:var(--text);
   font-family:"IBM Plex Sans",system-ui,-apple-system,"Segoe UI",sans-serif;
-  font-size:15px;line-height:1.6;-webkit-font-smoothing:antialiased;
+  font-size:15px;line-height:1.6;-webkit-font-smoothing:antialiased;overflow-x:hidden;
 }
+body::before{
+  content:"";position:fixed;inset:0;z-index:-2;pointer-events:none;
+  background:
+    radial-gradient(720px 520px at 12% -6%, rgba(138,166,255,.16), transparent 62%),
+    radial-gradient(620px 480px at 92% 8%, rgba(183,155,255,.11), transparent 60%),
+    radial-gradient(900px 700px at 50% 108%, rgba(229,197,142,.055), transparent 66%),
+    var(--ground);
+}
+body::after{
+  content:"";position:fixed;inset:0;z-index:-1;pointer-events:none;
+  background-image:
+    linear-gradient(to right, rgba(255,255,255,.028) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(255,255,255,.028) 1px, transparent 1px);
+  background-size:64px 64px;
+  -webkit-mask-image:radial-gradient(ellipse 78% 62% at 50% 22%, #000 20%, transparent 78%);
+          mask-image:radial-gradient(ellipse 78% 62% at 50% 22%, #000 20%, transparent 78%);
+}
+
 h1,h2,h3{font-family:"Bricolage Grotesque","IBM Plex Sans",system-ui,sans-serif;
   margin:0;line-height:1.1;letter-spacing:-.02em;text-wrap:balance}
 a{color:var(--accent)}
@@ -55,7 +54,7 @@ a{color:var(--accent)}
 
 /* ---------- shell ---------- */
 .wrap{max-width:1140px;margin:0 auto;padding:0 clamp(16px,3vw,32px)}
-.topbar{border-bottom:1px solid var(--line);background:var(--surface);position:sticky;top:0;z-index:20}
+.topbar{border-bottom:1px solid var(--line);background:rgba(10,13,20,.72);backdrop-filter:blur(18px);-webkit-backdrop-filter:blur(18px);position:sticky;top:0;z-index:20}
 .topbar .wrap{display:flex;align-items:center;gap:18px;flex-wrap:wrap;padding-top:14px;padding-bottom:14px}
 .brand{display:flex;flex-direction:column;gap:2px;margin-right:auto;min-width:0}
 .brand h1{font-size:1.12rem;font-weight:600}
@@ -68,17 +67,17 @@ main{padding:clamp(20px,3.5vh,34px) 0 80px}
 /* ---------- controls ---------- */
 .btn{
   font-family:"IBM Plex Mono",monospace;font-size:.75rem;letter-spacing:.08em;text-transform:uppercase;
-  padding:9px 15px;border-radius:3px;border:1px solid var(--line);background:var(--surface);
+  padding:9px 15px;border-radius:4px;border:1px solid var(--line);background:rgba(18,22,33,.7);backdrop-filter:blur(10px);
   color:var(--text);cursor:pointer;transition:border-color .18s,background .18s;white-space:nowrap;
 }
-.btn:hover:not(:disabled){border-color:var(--accent);background:var(--accent-soft)}
+.btn:hover:not(:disabled){border-color:rgba(138,166,255,.5);background:var(--accent-soft)}
 .btn:disabled{opacity:.42;cursor:not-allowed}
 .btn.primary{background:var(--accent-soft);border-color:var(--accent);color:var(--accent)}
 .btn.sm{padding:6px 11px;font-size:.68rem}
 .row{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
 
 input,textarea,select{
-  font-family:inherit;font-size:.92rem;color:var(--text);background:var(--surface);
+  font-family:inherit;font-size:.92rem;color:var(--text);background:rgba(18,22,33,.62);
   border:1px solid var(--line);border-radius:3px;padding:9px 11px;width:100%;
 }
 textarea{resize:vertical;line-height:1.55}
@@ -87,7 +86,7 @@ label{font-family:"IBM Plex Mono",monospace;font-size:.68rem;letter-spacing:.12e
   text-transform:uppercase;color:var(--muted);display:block;margin-bottom:5px}
 
 /* ---------- surfaces ---------- */
-.card{background:var(--surface);border:1px solid var(--line);border-radius:5px;box-shadow:var(--shadow)}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:7px;box-shadow:var(--shadow);backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px)}
 .pad{padding:18px}
 .panel-head{display:flex;align-items:center;justify-content:space-between;gap:12px;
   padding:12px 18px;border-bottom:1px solid var(--line);flex-wrap:wrap}
@@ -96,7 +95,7 @@ label{font-family:"IBM Plex Mono",monospace;font-size:.68rem;letter-spacing:.12e
 .pill{
   display:inline-flex;align-items:center;gap:6px;font-family:"IBM Plex Mono",monospace;
   font-size:.68rem;letter-spacing:.09em;text-transform:uppercase;padding:3px 9px;
-  border-radius:100px;border:1px solid var(--line);background:var(--surface-2);color:var(--muted);
+  border-radius:100px;border:1px solid var(--line);background:rgba(25,30,44,.72);color:var(--muted);
 }
 .pill.accent{border-color:var(--accent);background:var(--accent-soft);color:var(--accent)}
 .pill.good{border-color:var(--good);background:var(--good-soft);color:var(--good)}
@@ -119,8 +118,8 @@ td.num{font-variant-numeric:tabular-nums}
   border:1px solid var(--line);border-bottom-width:2px;border-radius:3px;padding:1px 6px;color:var(--muted);
 }
 
-.bar{height:6px;background:var(--surface-3);border-radius:100px;overflow:hidden}
-.bar > span{display:block;height:100%;background:var(--accent);border-radius:100px;transition:width .3s ease}
+.bar{height:6px;background:rgba(35,40,56,.8);border-radius:100px;overflow:hidden}
+.bar > span{display:block;height:100%;background:linear-gradient(90deg,var(--accent),var(--accent-2));border-radius:100px;transition:width .3s ease}
 
 :focus-visible{outline:2px solid var(--accent);outline-offset:2px;border-radius:2px}
 @media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
