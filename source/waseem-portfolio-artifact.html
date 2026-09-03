@@ -170,14 +170,31 @@ section:first-child{border-top:none;padding-top:0}
 .subrole .t{font-size:.95rem;font-weight:600;margin-bottom:10px}
 
 /* skills */
-.skills{display:flex;flex-direction:column;gap:1px;background:var(--line-soft);border:1px solid var(--line);border-radius:6px;overflow:hidden;box-shadow:var(--shadow);backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px)}
-.skill-row{background:rgba(18,22,33,.62);padding:16px 20px;display:grid;gap:10px}
-@media (min-width:680px){.skill-row{grid-template-columns:200px 1fr;gap:22px;align-items:start}}
-.skill-row .k{font-size:.88rem;font-weight:600}
-.tags{display:flex;flex-wrap:wrap;gap:7px}
+/* label + flowing list: dense, no dead space, reads like a competencies table */
+.skills{
+  border:1px solid var(--line);border-radius:6px;overflow:hidden;box-shadow:var(--shadow);
+  background:rgba(18,22,33,.55);
+  backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);
+}
+.skill-row{
+  display:grid;grid-template-columns:1fr;gap:5px;
+  padding:13px 18px;border-top:1px solid var(--line-soft);
+}
+.skill-row:first-child{border-top:none}
+@media (min-width:720px){
+  .skill-row{grid-template-columns:186px minmax(0,1fr);gap:24px;align-items:baseline;padding:12px 20px}
+}
+.skill-row .k{
+  font-family:"IBM Plex Mono",monospace;font-size:.68rem;letter-spacing:.12em;
+  text-transform:uppercase;color:var(--accent);opacity:.9;font-weight:400;line-height:1.5;
+}
+.tags{display:block;line-height:1.75}
 .tag{
-  font-family:"IBM Plex Mono",monospace;font-size:.74rem;color:var(--muted);
-  background:rgba(25,30,44,.7);border:1px solid var(--line);border-radius:3px;padding:3px 8px;
+  display:inline;font-family:inherit;font-size:.88rem;color:var(--muted);
+  background:none;border:none;border-radius:0;padding:0;white-space:normal;
+}
+.tag:not(:last-child)::after{
+  content:"  ·  ";color:rgba(255,255,255,.2);
 }
 
 /* projects */
@@ -279,7 +296,7 @@ footer{
   <aside class="rail">
     <h1>Waseem Ansari</h1>
     <p class="role"><b>Computer Engineer (B.E.)</b> specialising in software, web, and mobile application development, quality assurance, and AI &amp; search evaluation.</p>
-    <span class="avail"><i></i>Available for work</span>
+    <span class="avail"><i></i>Open to remote &amp; on-site roles</span>
     <nav aria-label="Sections">
       <a href="#about">About</a>
       <a href="#experience">Experience</a>
@@ -333,9 +350,10 @@ footer{
           <h3>Senior Software Engineer</h3>
           <div class="org">Net Tech Services India Pvt. Ltd — Jan 2017 – Mar 2025</div>
           <ul>
+            <li>Contributed to the nationwide Cheque Truncation System (CTS) rollout for core banking &mdash; a regulated, high-availability environment where a failed deployment stops branch operations.</li>
             <li>Designed, built, and shipped software applications, websites, and mobile apps for clients, from first architecture decisions through to deployment.</li>
             <li>Led front-end and back-end integration work, keeping data flowing cleanly and the system secure.</li>
-            <li>Ran thorough functional and non-functional testing, which meaningfully cut the number of bugs that reached production.</li>
+            <li>Ran thorough functional and non-functional testing, cutting the defect rate reaching production.</li>
             <li>Worked closely with UI/UX designers, product managers, and QA in an Agile setup, usually against tight deadlines.</li>
             <li>Mentored junior developers and helped settle on coding standards the whole team could work to.</li>
           </ul>
