@@ -1,0 +1,343 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Search Relevance Rater — Waseem Ansari</title>
+<meta name="description" content="Rate search results against Needs Met and Page Quality guidelines, with keyboard shortcuts and CSV export.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400;12..96,600;12..96,800&family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
+<link rel="stylesheet" href="app.css">
+<style>
+.layout{display:grid;gap:18px;grid-template-columns:1fr}
+@media (min-width:1020px){.layout{grid-template-columns:minmax(0,1fr) 292px;gap:22px;align-items:start}}
+
+.query-card{margin-bottom:16px}
+.query{font-size:1.18rem;font-weight:600;font-family:"Bricolage Grotesque",sans-serif;letter-spacing:-.02em}
+.intent{margin-top:8px;font-size:.86rem;color:var(--muted);max-width:66ch}
+
+.serp{display:flex;flex-direction:column;gap:12px}
+.result{padding:16px 18px}
+.result.rated{border-color:var(--accent)}
+.url{font-family:"IBM Plex Mono",monospace;font-size:.74rem;color:var(--muted);margin-bottom:5px;
+  overflow-wrap:anywhere}
+.title{font-size:1rem;font-weight:600;color:var(--accent);margin-bottom:5px;line-height:1.35}
+.snippet{font-size:.87rem;color:var(--muted);line-height:1.55}
+.flags{display:flex;gap:6px;flex-wrap:wrap;margin-top:10px}
+
+.rating-block{margin-top:14px;padding-top:13px;border-top:1px solid var(--line);display:grid;gap:12px}
+.rate-row{display:grid;gap:7px}
+.rate-row .lab{display:flex;align-items:baseline;justify-content:space-between;gap:10px}
+.rate-row .lab .t{font-family:"IBM Plex Mono",monospace;font-size:.68rem;letter-spacing:.12em;
+  text-transform:uppercase;color:var(--muted)}
+.rate-row .lab .cur{font-size:.75rem;color:var(--text)}
+.opts{display:flex;gap:5px;flex-wrap:wrap}
+.opts button{
+  font-family:"IBM Plex Mono",monospace;font-size:.7rem;letter-spacing:.05em;padding:6px 10px;
+  border:1px solid var(--line);background:var(--surface-2);color:var(--muted);border-radius:3px;
+  cursor:pointer;transition:all .15s;flex:1;min-width:62px;
+}
+.opts button:hover{border-color:var(--accent);color:var(--text)}
+.opts button[aria-pressed="true"]{background:var(--accent-soft);border-color:var(--accent);
+  color:var(--accent);font-weight:500}
+.opts button[aria-pressed="true"][data-tone="bad"]{background:var(--bad-soft);border-color:var(--bad);color:var(--bad)}
+.opts button[aria-pressed="true"][data-tone="warn"]{background:var(--warn-soft);border-color:var(--warn);color:var(--warn)}
+.opts button[aria-pressed="true"][data-tone="good"]{background:var(--good-soft);border-color:var(--good);color:var(--good)}
+
+.side{display:flex;flex-direction:column;gap:14px;position:sticky;top:74px}
+.stat-line{display:flex;justify-content:space-between;align-items:baseline;font-size:.85rem;padding:7px 0}
+.stat-line + .stat-line{border-top:1px solid var(--line)}
+.stat-line .v{font-family:"IBM Plex Mono",monospace;font-variant-numeric:tabular-nums}
+.stat-line .k{color:var(--muted);font-size:.8rem}
+.legend{display:flex;flex-direction:column;gap:6px;font-size:.76rem;color:var(--muted)}
+.legend div{display:flex;gap:8px;align-items:baseline}
+.legend .c{font-family:"IBM Plex Mono",monospace;color:var(--text);min-width:26px}
+pre.out{background:var(--surface-2);border:1px solid var(--line);border-radius:4px;padding:12px;
+  font-family:"IBM Plex Mono",monospace;font-size:.71rem;line-height:1.5;overflow-x:auto;max-height:230px}
+.selected-ring{box-shadow:0 0 0 2px var(--accent)}
+</style>
+</head>
+<body>
+
+<header class="topbar">
+  <div class="wrap">
+    <div class="brand">
+      <h1>Search Relevance Rater</h1>
+      <span class="sub">Needs Met and Page Quality rating against written guidelines</span>
+    </div>
+    <a class="backlink" href="../index.html">&larr; Portfolio</a>
+  </div>
+</header>
+
+<main class="wrap">
+  <div class="layout">
+    <div>
+      <div class="card pad query-card">
+        <div class="row" style="justify-content:space-between;margin-bottom:9px">
+          <span class="eyebrow">Query <span id="q-num">1</span> of <span id="q-total">3</span></span>
+          <span class="row" style="gap:6px">
+            <span class="pill" id="q-locale">en-IN &middot; Mobile</span>
+            <span class="pill accent" id="q-type">Know Simple</span>
+          </span>
+        </div>
+        <div class="query" id="q-text"></div>
+        <div class="intent" id="q-intent"></div>
+      </div>
+
+      <div class="serp" id="serp"></div>
+
+      <div class="row" style="margin-top:18px">
+        <button class="btn" id="btn-prev">&larr; Previous query</button>
+        <button class="btn primary" id="btn-next">Next query &rarr;</button>
+        <button class="btn" id="btn-export">Export CSV</button>
+      </div>
+
+      <div class="card" style="margin-top:16px;display:none" id="export-card">
+        <div class="panel-head"><h2>Export preview</h2><span class="pill">ratings.csv</span></div>
+        <div class="pad">
+          <pre class="out" id="csv"></pre>
+          <div class="row" style="margin-top:10px">
+            <button class="btn sm primary" id="btn-copy">Copy CSV</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <aside class="side">
+      <div class="card pad">
+        <div class="eyebrow" style="margin-bottom:10px">Progress</div>
+        <div class="bar" style="margin-bottom:12px"><span id="progress-bar" style="width:0%"></span></div>
+        <div class="stat-line"><span class="k">Results rated</span><span class="v" id="s-rated">0 / 0</span></div>
+        <div class="stat-line"><span class="k">Fully Meets or better</span><span class="v" id="s-high">0</span></div>
+        <div class="stat-line"><span class="k">Fails to Meet</span><span class="v" id="s-fail">0</span></div>
+        <div class="stat-line"><span class="k">Low quality pages</span><span class="v" id="s-low">0</span></div>
+      </div>
+
+      <div class="card pad">
+        <div class="eyebrow" style="margin-bottom:10px">Needs Met scale</div>
+        <div class="legend">
+          <div><span class="c">FailsM</span><span>Wrong, unhelpful, or off-topic for this query</span></div>
+          <div><span class="c">SM</span><span>Slightly Meets &mdash; tangentially useful</span></div>
+          <div><span class="c">MM</span><span>Moderately Meets &mdash; helpful but incomplete</span></div>
+          <div><span class="c">HM</span><span>Highly Meets &mdash; very helpful for most users</span></div>
+          <div><span class="c">FullyM</span><span>Fully Meets &mdash; complete, immediate answer</span></div>
+        </div>
+      </div>
+
+      <div class="card pad">
+        <div class="eyebrow" style="margin-bottom:10px">Shortcuts</div>
+        <p class="note" style="margin:0">
+          <span class="kbd">J</span> / <span class="kbd">K</span> move between results &middot;
+          <span class="kbd">1</span>&ndash;<span class="kbd">5</span> set Needs Met &middot;
+          <span class="kbd">&rarr;</span> next query
+        </p>
+      </div>
+
+      <div class="card pad">
+        <div class="eyebrow" style="margin-bottom:8px">About this tool</div>
+        <p class="note" style="margin:0">A working model of the search quality rating task: a query with stated intent, a result set, and two independent judgements per result. Sample queries are built in.</p>
+      </div>
+    </aside>
+  </div>
+</main>
+
+<script>
+const NM = [
+  {id:"FailsM", label:"Fails", tone:"bad"},
+  {id:"SM", label:"Slightly", tone:"bad"},
+  {id:"MM", label:"Moderately", tone:"warn"},
+  {id:"HM", label:"Highly", tone:"good"},
+  {id:"FullyM", label:"Fully", tone:"good"}
+];
+const PQ = [
+  {id:"Lowest", tone:"bad"}, {id:"Low", tone:"bad"},
+  {id:"Medium", tone:"warn"}, {id:"High", tone:"good"}, {id:"Highest", tone:"good"}
+];
+
+const QUERIES = [
+  {
+    q:"how long to boil eggs soft",
+    locale:"en-IN · Mobile", type:"Know Simple",
+    intent:"The user wants a specific cooking time for soft-boiled eggs. A Fully Meets result gives the number immediately, without requiring a click or a scroll past a life story.",
+    results:[
+      {url:"seriouseats.com/how-to-boil-eggs", title:"Soft-Boiled Eggs: 6 Minutes for a Runny Yolk",
+       snippet:"Lower eggs into already-boiling water and set a timer for 6 minutes for a fully runny yolk, 7 for jammy, 8 for barely set. Transfer straight to ice water. Timing is measured from the moment the egg enters the water, not from when it returns to a boil.",
+       flags:["Recipe site","Answer in title"]},
+      {url:"reddit.com/r/Cooking/comments/soft_boiled_timing",
+       title:"What's your go-to soft boil time? : r/Cooking",
+       snippet:"I do 6:30 every time. — Depends on your altitude honestly. — 7 minutes then ice bath, never fails me. — my grandmother said 5 and she was never wrong (37 comments)",
+       flags:["Forum","Conflicting answers"]},
+      {url:"eggnutrition-council.example.org/health-benefits-of-eggs",
+       title:"The Health Benefits of Eggs | Egg Nutrition Council",
+       snippet:"Eggs are a complete protein containing all nine essential amino acids, and are a source of choline, vitamin D, and selenium. Learn about the role eggs play in a balanced diet across all life stages.",
+       flags:["Off-topic","No cooking time"]},
+      {url:"best-kitchen-deals.example.com/blog/egg-timers-2024-ranked",
+       title:"17 Best Egg Timers of 2024 (Ranked & Reviewed)",
+       snippet:"We tested 17 egg timers to find the best. Our top pick is the ChefPro Digital... Buy now on Amazon. This post contains affiliate links. Prices updated hourly.",
+       flags:["Affiliate","Thin content","Ad-heavy"]}
+    ]
+  },
+  {
+    q:"axis bank customer care number",
+    locale:"en-IN · Mobile", type:"Navigate / Visit-in-person",
+    intent:"The user wants the official contact number for a specific bank. Only the bank's own page can Fully Meet — an unofficial number here is a real-world harm, since callers may be phished.",
+    results:[
+      {url:"axisbank.com/contact-us", title:"Contact Us | Customer Care | Axis Bank",
+       snippet:"24x7 Customer Care: 1860-419-5555 / 1860-500-5555. NRI Services, credit card blocking, and branch locator. Report fraud immediately on 1800-419-8933.",
+       flags:["Official site","Complete"]},
+      {url:"customercarenumbers-india.example.net/axis-bank-toll-free",
+       title:"Axis Bank Customer Care Number — All India Toll Free 2024",
+       snippet:"Axis Bank customer care number list for all states. Helpline: 1860-419-5555. Also find Axis Bank head office address, email id, and complaint number. Updated list of all bank helplines.",
+       flags:["Aggregator","Unverified","Ad-heavy"]},
+      {url:"axisbank.com/personal/accounts/savings-account",
+       title:"Savings Account — Open Online | Axis Bank",
+       snippet:"Open a savings account online in minutes. Zero balance options available. Compare account types, interest rates, and debit card benefits.",
+       flags:["Official site","Wrong page"]},
+      {url:"complaint-forum.example.com/threads/axis-bank-never-answers",
+       title:"Axis bank customer care never answers — Consumer Complaints",
+       snippet:"I have been calling 1860-419-5555 for three days and nobody picks up. Anyone have a direct number for the Andheri branch? My account is frozen and I need help urgently.",
+       flags:["Forum","User frustration"]}
+    ]
+  },
+  {
+    q:"is paracetamol safe in pregnancy",
+    locale:"en-IN · Mobile", type:"YMYL / Know",
+    intent:"Your Money or Your Life query. Page Quality carries extra weight: expertise and authority of the source matter as much as whether the answer is correct. Rate a plausible-sounding answer from an unqualified source strictly.",
+    results:[
+      {url:"nhs.uk/medicines/paracetamol-for-adults/pregnancy",
+       title:"Paracetamol in pregnancy and breastfeeding — NHS",
+       snippet:"Paracetamol is generally considered safe in pregnancy and is the first choice painkiller. Take the lowest dose that works, for the shortest time. Speak to a midwife or doctor if you need it for more than a few days.",
+       flags:["Health authority","Reviewed content"]},
+      {url:"mommyblog-natural.example.com/why-i-refuse-all-medication",
+       title:"Why I Refused Every Medication During My Pregnancy",
+       snippet:"After doing my own research I decided paracetamol was not worth the risk. Here's what I used instead and why I believe every mother should question what doctors tell her. My three children are all perfectly healthy.",
+       flags:["Anecdotal","No expertise","YMYL risk"]},
+      {url:"pubmed.ncbi.nlm.nih.gov/acetaminophen-pregnancy-outcomes",
+       title:"Prenatal acetaminophen exposure and neurodevelopmental outcomes: a cohort study",
+       snippet:"We examined associations between maternal acetaminophen use and child neurodevelopment in a cohort of 73,881 mother-child pairs. Findings were attenuated after sibling-control analysis, suggesting confounding by indication.",
+       flags:["Primary research","Not user-facing"]},
+      {url:"health-answers-fast.example.net/paracetamol-pregnancy-safe",
+       title:"Paracetamol Pregnancy: Everything You Need To Know",
+       snippet:"Is paracetamol safe during pregnancy? Many women ask this question. In this article we will explore what paracetamol is, the history of paracetamol, how paracetamol works, and finally whether it is safe. Paracetamol was first made in 1877...",
+       flags:["Content farm","Buries the answer","No author"]}
+    ]
+  }
+];
+
+let qi = 0, sel = 0;
+const ratings = {};  // "qi:ri" -> {nm, pq}
+const el = id => document.getElementById(id);
+const key = (a,b) => a + ":" + b;
+
+function render(){
+  const Q = QUERIES[qi];
+  el("q-num").textContent = qi+1;
+  el("q-total").textContent = QUERIES.length;
+  el("q-text").textContent = Q.q;
+  el("q-intent").textContent = Q.intent;
+  el("q-locale").textContent = Q.locale;
+  el("q-type").textContent = Q.type;
+
+  el("serp").innerHTML = Q.results.map((r,i)=>{
+    const rt = ratings[key(qi,i)] || {};
+    return `<div class="card result ${rt.nm?"rated":""} ${i===sel?"selected-ring":""}" data-i="${i}">
+      <div class="url">${esc(r.url)}</div>
+      <div class="title">${esc(r.title)}</div>
+      <div class="snippet">${esc(r.snippet)}</div>
+      <div class="flags">${r.flags.map(f=>`<span class="pill">${esc(f)}</span>`).join("")}</div>
+      <div class="rating-block">
+        <div class="rate-row">
+          <div class="lab"><span class="t">Needs Met</span><span class="cur">${rt.nm ? nmLabel(rt.nm) : "Not rated"}</span></div>
+          <div class="opts" data-kind="nm" data-i="${i}">
+            ${NM.map((o,n)=>`<button data-v="${o.id}" data-tone="${o.tone}" aria-pressed="${rt.nm===o.id}">${o.label}</button>`).join("")}
+          </div>
+        </div>
+        <div class="rate-row">
+          <div class="lab"><span class="t">Page Quality</span><span class="cur">${rt.pq || "Not rated"}</span></div>
+          <div class="opts" data-kind="pq" data-i="${i}">
+            ${PQ.map(o=>`<button data-v="${o.id}" data-tone="${o.tone}" aria-pressed="${rt.pq===o.id}">${o.id}</button>`).join("")}
+          </div>
+        </div>
+      </div>
+    </div>`;
+  }).join("");
+
+  el("serp").querySelectorAll(".opts").forEach(o=>{
+    o.addEventListener("click", e=>{
+      const b = e.target.closest("button"); if(!b) return;
+      setRating(+o.dataset.i, o.dataset.kind, b.dataset.v);
+    });
+  });
+  el("serp").querySelectorAll(".result").forEach(c=>{
+    c.addEventListener("click", ()=>{ sel = +c.dataset.i; highlight(); });
+  });
+
+  el("btn-prev").disabled = qi === 0;
+  el("btn-next").disabled = qi === QUERIES.length - 1;
+  updateStats();
+}
+
+function nmLabel(id){ const o = NM.find(x=>x.id===id); return o ? o.label + " Meets" : id; }
+
+function setRating(i, kind, v){
+  const k = key(qi,i);
+  if(!ratings[k]) ratings[k] = {};
+  ratings[k][kind] = v;
+  render();
+}
+
+function highlight(){
+  el("serp").querySelectorAll(".result").forEach(c=>
+    c.classList.toggle("selected-ring", +c.dataset.i === sel));
+}
+
+function totalResults(){ return QUERIES.reduce((n,q)=>n+q.results.length,0); }
+
+function updateStats(){
+  const vals = Object.values(ratings).filter(r=>r.nm);
+  el("s-rated").textContent = `${vals.length} / ${totalResults()}`;
+  el("s-high").textContent = vals.filter(r=>r.nm==="HM"||r.nm==="FullyM").length;
+  el("s-fail").textContent = vals.filter(r=>r.nm==="FailsM").length;
+  el("s-low").textContent = Object.values(ratings).filter(r=>r.pq==="Low"||r.pq==="Lowest").length;
+  el("progress-bar").style.width = (vals.length/totalResults()*100)+"%";
+}
+
+el("btn-prev").onclick = ()=>{ if(qi>0){ qi--; sel=0; render(); window.scrollTo({top:0,behavior:"smooth"}); } };
+el("btn-next").onclick = ()=>{ if(qi<QUERIES.length-1){ qi++; sel=0; render(); window.scrollTo({top:0,behavior:"smooth"}); } };
+
+el("btn-export").onclick = ()=>{
+  const rows = [["query","locale","query_type","rank","url","needs_met","page_quality"]];
+  QUERIES.forEach((Q,qq)=>Q.results.forEach((r,ri)=>{
+    const rt = ratings[key(qq,ri)];
+    if(rt && (rt.nm || rt.pq))
+      rows.push([Q.q, Q.locale, Q.type, ri+1, r.url, rt.nm||"", rt.pq||""]);
+  }));
+  const csv = rows.map(r=>r.map(c=>`"${String(c).replace(/"/g,'""')}"`).join(",")).join("\n");
+  el("csv").textContent = rows.length > 1 ? csv : "No ratings yet — rate a result first.";
+  el("export-card").style.display = "block";
+  el("export-card").scrollIntoView({behavior:"smooth", block:"nearest"});
+  el("btn-copy").onclick = async e=>{
+    try{ await navigator.clipboard.writeText(csv); e.target.textContent="Copied"; }
+    catch(err){ e.target.textContent="Select text above"; }
+    setTimeout(()=>{ e.target.textContent="Copy CSV"; }, 1600);
+  };
+};
+
+document.addEventListener("keydown", e=>{
+  if(/^(INPUT|TEXTAREA)$/.test(e.target.tagName)) return;
+  const n = QUERIES[qi].results.length;
+  const k = e.key.toLowerCase();
+  if(k==="j"){ sel = Math.min(sel+1, n-1); highlight(); e.preventDefault(); }
+  else if(k==="k"){ sel = Math.max(sel-1, 0); highlight(); e.preventDefault(); }
+  else if(/^[1-5]$/.test(e.key)){ setRating(sel, "nm", NM[+e.key-1].id); e.preventDefault(); }
+  else if(e.key==="ArrowRight"){ el("btn-next").click(); }
+  else if(e.key==="ArrowLeft"){ el("btn-prev").click(); }
+});
+
+function esc(s){ return String(s).replace(/[&<>"']/g, c=>({ "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;" }[c])); }
+
+render();
+</script>
+</body>
+</html>

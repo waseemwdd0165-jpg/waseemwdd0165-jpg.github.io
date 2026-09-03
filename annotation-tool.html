@@ -1,0 +1,359 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Text Annotation Tool — Waseem Ansari</title>
+<meta name="description" content="Keyboard-driven span labelling for NLP training data, with JSONL export and an inter-annotator agreement check.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400;12..96,600;12..96,800&family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
+<link rel="stylesheet" href="app.css">
+<style>
+.layout{display:grid;gap:18px;grid-template-columns:1fr}
+@media (min-width:1020px){.layout{grid-template-columns:minmax(0,1fr) 296px;gap:22px;align-items:start}}
+
+.doc{font-size:1.02rem;line-height:2.15;padding:22px;user-select:text;cursor:text}
+.doc mark{
+  padding:2px 1px;border-radius:2px;position:relative;cursor:pointer;
+  border-bottom:2px solid currentColor;background:transparent;color:inherit;
+}
+.doc mark .tagname{
+  font-family:"IBM Plex Mono",monospace;font-size:.58rem;letter-spacing:.08em;
+  text-transform:uppercase;vertical-align:super;margin-left:3px;opacity:.85;
+}
+
+.labels{display:flex;flex-direction:column;gap:1px;background:var(--line)}
+.lbl-btn{
+  background:var(--surface);padding:10px 14px;display:flex;align-items:center;gap:11px;
+  cursor:pointer;border:none;width:100%;text-align:left;font-family:inherit;font-size:.87rem;
+  color:var(--text);transition:background .15s;border-left:2px solid transparent;
+}
+.lbl-btn:hover{background:var(--surface-2)}
+.lbl-btn[aria-pressed="true"]{background:var(--surface-2)}
+.swatch{width:11px;height:11px;border-radius:2px;flex:none}
+.lbl-btn .n{flex:1}
+.lbl-btn .count{font-family:"IBM Plex Mono",monospace;font-size:.72rem;color:var(--muted);
+  font-variant-numeric:tabular-nums}
+
+.ann-list{display:flex;flex-direction:column;gap:1px;background:var(--line);max-height:280px;overflow-y:auto}
+.ann{background:var(--surface);padding:9px 13px;display:flex;align-items:center;gap:10px;font-size:.83rem}
+.ann .txt{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.ann .del{background:none;border:none;color:var(--muted);cursor:pointer;font-size:.9rem;
+  padding:0 4px;line-height:1}
+.ann .del:hover{color:var(--bad)}
+
+.stat-line{display:flex;justify-content:space-between;align-items:baseline;font-size:.85rem;padding:7px 0}
+.stat-line + .stat-line{border-top:1px solid var(--line)}
+.stat-line .v{font-family:"IBM Plex Mono",monospace;font-variant-numeric:tabular-nums}
+.stat-line .k{color:var(--muted);font-size:.8rem}
+
+.side{display:flex;flex-direction:column;gap:14px;position:sticky;top:74px}
+pre.out{background:var(--surface-2);border:1px solid var(--line);border-radius:4px;padding:12px;
+  font-family:"IBM Plex Mono",monospace;font-size:.7rem;line-height:1.5;overflow-x:auto;max-height:220px}
+.doc-nav{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.hintbar{font-size:.8rem;color:var(--muted);margin-top:12px;display:flex;gap:14px;flex-wrap:wrap}
+</style>
+</head>
+<body>
+
+<header class="topbar">
+  <div class="wrap">
+    <div class="brand">
+      <h1>Text Annotation Tool</h1>
+      <span class="sub">Span labelling for NLP training data, with agreement checking</span>
+    </div>
+    <a class="backlink" href="../index.html">&larr; Portfolio</a>
+  </div>
+</header>
+
+<main class="wrap">
+  <div class="layout">
+    <div>
+      <div class="card" style="margin-bottom:16px">
+        <div class="panel-head">
+          <h2 id="doc-title">Document</h2>
+          <span class="row" style="gap:8px">
+            <span class="pill" id="doc-domain"></span>
+            <span class="pill accent" id="doc-pos"></span>
+          </span>
+        </div>
+        <div class="doc" id="doc"></div>
+      </div>
+
+      <div class="doc-nav">
+        <button class="btn" id="btn-prev">&larr; Previous</button>
+        <button class="btn" id="btn-next">Next &rarr;</button>
+        <button class="btn" id="btn-clear">Clear this document</button>
+        <button class="btn primary" id="btn-export">Export JSONL</button>
+      </div>
+      <div class="hintbar">
+        <span>Select text, then press a number key or click a label.</span>
+        <span><span class="kbd">1</span>&ndash;<span class="kbd">5</span> label</span>
+        <span><span class="kbd">Esc</span> deselect</span>
+      </div>
+
+      <div class="card" style="margin-top:16px;display:none" id="export-card">
+        <div class="panel-head"><h2>Export preview</h2><span class="pill">annotations.jsonl</span></div>
+        <div class="pad">
+          <pre class="out" id="jsonl"></pre>
+          <div class="row" style="margin-top:10px">
+            <button class="btn sm primary" id="btn-copy">Copy JSONL</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <aside class="side">
+      <div class="card">
+        <div class="panel-head"><h2>Label set</h2><span class="pill" id="active-label">None</span></div>
+        <div class="labels" id="labels"></div>
+      </div>
+
+      <div class="card">
+        <div class="panel-head"><h2>This document</h2><span class="pill" id="ann-count">0</span></div>
+        <div class="ann-list" id="ann-list"></div>
+      </div>
+
+      <div class="card pad">
+        <div class="eyebrow" style="margin-bottom:10px">Session</div>
+        <div class="bar" style="margin-bottom:12px"><span id="progress-bar" style="width:0%"></span></div>
+        <div class="stat-line"><span class="k">Documents touched</span><span class="v" id="s-docs">0 / 0</span></div>
+        <div class="stat-line"><span class="k">Total spans</span><span class="v" id="s-spans">0</span></div>
+        <div class="stat-line"><span class="k">Agreement with gold</span><span class="v" id="s-agree">&mdash;</span></div>
+      </div>
+
+      <div class="card pad">
+        <div class="eyebrow" style="margin-bottom:8px">About this tool</div>
+        <p class="note" style="margin:0">The span-labelling loop behind NER and intent training sets: a fixed schema, keyboard-first marking, and an agreement score against a gold standard &mdash; the measure that decides whether an annotator's work is usable.</p>
+      </div>
+    </aside>
+  </div>
+</main>
+
+<script>
+const LABELS = [
+  {id:"PRODUCT",  name:"Product",       color:"#8AA6FF"},
+  {id:"ISSUE",    name:"Issue",         color:"#F08B7E"},
+  {id:"SENTIMENT",name:"Sentiment cue", color:"#E5C58E"},
+  {id:"ACTION",   name:"Requested action", color:"#5FD3A6"},
+  {id:"TIME",     name:"Time reference", color:"#C39BE8"}
+];
+
+const DOCS = [
+  {
+    id:"d1", domain:"Support ticket",
+    text:"The wireless keyboard I ordered last Tuesday keeps disconnecting every few minutes. I've replaced the batteries twice and it still drops. I'd like a replacement sent out, or a refund if that's not possible.",
+    gold:[
+      {label:"PRODUCT", text:"wireless keyboard"},
+      {label:"TIME", text:"last Tuesday"},
+      {label:"ISSUE", text:"keeps disconnecting"},
+      {label:"ACTION", text:"replacement"},
+      {label:"ACTION", text:"refund"}
+    ]
+  },
+  {
+    id:"d2", domain:"App store review",
+    text:"Honestly the update ruined it. The new dashboard is slower than before and the export button has vanished entirely. I've been using this app since 2021 and I'm genuinely frustrated. Please bring back the old layout.",
+    gold:[
+      {label:"SENTIMENT", text:"ruined"},
+      {label:"PRODUCT", text:"dashboard"},
+      {label:"ISSUE", text:"slower"},
+      {label:"PRODUCT", text:"export button"},
+      {label:"ISSUE", text:"vanished"},
+      {label:"TIME", text:"since 2021"},
+      {label:"SENTIMENT", text:"frustrated"},
+      {label:"ACTION", text:"bring back the old layout"}
+    ]
+  },
+  {
+    id:"d3", domain:"Live chat transcript",
+    text:"Customer: my payment failed three times this morning but the money left my account each time. Agent: I can see three pending authorisations. Customer: I need those released today, I have rent due tomorrow.",
+    gold:[
+      {label:"ISSUE", text:"payment failed"},
+      {label:"TIME", text:"this morning"},
+      {label:"ISSUE", text:"money left my account"},
+      {label:"ACTION", text:"released"},
+      {label:"TIME", text:"today"},
+      {label:"TIME", text:"tomorrow"}
+    ]
+  }
+];
+
+let di = 0, active = null;
+const anns = {};              // docId -> [{start,end,label,text}]
+DOCS.forEach(d => anns[d.id] = []);
+
+const el = id => document.getElementById(id);
+const doc = () => DOCS[di];
+const list = () => anns[doc().id];
+const colorOf = id => (LABELS.find(l=>l.id===id)||{}).color || "var(--accent)";
+
+/* ---------- rendering ---------- */
+function renderDoc(){
+  const d = doc();
+  el("doc-title").textContent = "Document " + (di+1);
+  el("doc-domain").textContent = d.domain;
+  el("doc-pos").textContent = `${di+1} / ${DOCS.length}`;
+
+  const spans = [...list()].sort((a,b)=>a.start-b.start);
+  let html = "", cursor = 0;
+  spans.forEach(s=>{
+    html += esc(d.text.slice(cursor, s.start));
+    html += `<mark style="color:${colorOf(s.label)};background:${colorOf(s.label)}22" data-start="${s.start}" title="${esc(s.label)} — click to remove">`
+         +  esc(d.text.slice(s.start, s.end))
+         +  `<span class="tagname">${esc(s.label)}</span></mark>`;
+    cursor = s.end;
+  });
+  html += esc(d.text.slice(cursor));
+  el("doc").innerHTML = html;
+
+  el("doc").querySelectorAll("mark").forEach(m=>{
+    m.addEventListener("click", e=>{
+      e.stopPropagation();
+      remove(+m.dataset.start);
+    });
+  });
+
+  el("btn-prev").disabled = di === 0;
+  el("btn-next").disabled = di === DOCS.length - 1;
+  renderLabels(); renderList(); renderStats();
+}
+
+function renderLabels(){
+  const counts = {};
+  Object.values(anns).flat().forEach(a=>counts[a.label] = (counts[a.label]||0)+1);
+  el("labels").innerHTML = LABELS.map((l,i)=>`
+    <button class="lbl-btn" data-id="${l.id}" aria-pressed="${active===l.id}"
+            style="${active===l.id?`border-left-color:${l.color}`:""}">
+      <span class="swatch" style="background:${l.color}"></span>
+      <span class="n">${esc(l.name)}</span>
+      <span class="count">${counts[l.id]||0}</span>
+      <span class="kbd">${i+1}</span>
+    </button>`).join("");
+  el("labels").querySelectorAll(".lbl-btn").forEach(b=>{
+    b.addEventListener("click", ()=>{
+      active = active === b.dataset.id ? null : b.dataset.id;
+      applySelection();
+      renderLabels();
+      el("active-label").textContent = active ? labelName(active) : "None";
+    });
+  });
+}
+
+function labelName(id){ const l = LABELS.find(x=>x.id===id); return l ? l.name : id; }
+
+function renderList(){
+  const spans = [...list()].sort((a,b)=>a.start-b.start);
+  el("ann-count").textContent = spans.length;
+  el("ann-list").innerHTML = spans.length ? spans.map(s=>`
+    <div class="ann">
+      <span class="swatch" style="background:${colorOf(s.label)}"></span>
+      <span class="txt">${esc(s.text)}</span>
+      <button class="del" data-start="${s.start}" aria-label="Remove annotation">&times;</button>
+    </div>`).join("") : `<div class="empty" style="padding:22px 14px">No spans marked yet.</div>`;
+  el("ann-list").querySelectorAll(".del").forEach(b=>
+    b.addEventListener("click", ()=>remove(+b.dataset.start)));
+}
+
+function renderStats(){
+  const touched = DOCS.filter(d=>anns[d.id].length).length;
+  const total = Object.values(anns).flat().length;
+  el("s-docs").textContent = `${touched} / ${DOCS.length}`;
+  el("s-spans").textContent = total;
+  el("progress-bar").style.width = (touched/DOCS.length*100)+"%";
+
+  // agreement: of the gold spans in touched documents, how many did we mark with the right label?
+  let goldSeen = 0, hit = 0;
+  DOCS.forEach(d=>{
+    if(!anns[d.id].length) return;
+    d.gold.forEach(g=>{
+      goldSeen++;
+      const gs = d.text.indexOf(g.text);
+      if(gs < 0) return;
+      const ge = gs + g.text.length;
+      if(anns[d.id].some(a=>a.label===g.label && overlaps(a.start,a.end,gs,ge))) hit++;
+    });
+  });
+  el("s-agree").textContent = goldSeen ? Math.round(hit/goldSeen*100)+"%" : "—";
+}
+
+function overlaps(a1,a2,b1,b2){ return a1 < b2 && b1 < a2; }
+
+/* ---------- editing ---------- */
+function applySelection(){
+  if(!active) return;
+  const sel = window.getSelection();
+  if(!sel || sel.isCollapsed) return;
+  const container = el("doc");
+  if(!container.contains(sel.anchorNode) || !container.contains(sel.focusNode)) return;
+
+  const range = sel.getRangeAt(0);
+  const pre = range.cloneRange();
+  pre.selectNodeContents(container);
+  pre.setEnd(range.startContainer, range.startOffset);
+  let start = pre.toString().length;
+  let end = start + range.toString().length;
+
+  // trim whitespace at the edges of the selection
+  const text = doc().text;
+  while(start < end && /\s/.test(text[start])) start++;
+  while(end > start && /\s/.test(text[end-1])) end--;
+  if(end <= start) return;
+
+  // drop anything it overlaps, then add
+  anns[doc().id] = list().filter(a=>!overlaps(a.start,a.end,start,end));
+  list().push({start, end, label: active, text: text.slice(start,end)});
+  sel.removeAllRanges();
+  renderDoc();
+}
+
+function remove(start){
+  anns[doc().id] = list().filter(a=>a.start !== start);
+  renderDoc();
+}
+
+el("doc").addEventListener("mouseup", ()=>{ if(active) applySelection(); });
+el("btn-prev").onclick = ()=>{ if(di>0){ di--; renderDoc(); } };
+el("btn-next").onclick = ()=>{ if(di<DOCS.length-1){ di++; renderDoc(); } };
+el("btn-clear").onclick = ()=>{ anns[doc().id] = []; renderDoc(); };
+
+el("btn-export").onclick = ()=>{
+  const lines = DOCS.filter(d=>anns[d.id].length).map(d=>JSON.stringify({
+    id: d.id,
+    domain: d.domain,
+    text: d.text,
+    entities: [...anns[d.id]].sort((a,b)=>a.start-b.start)
+      .map(a=>[a.start, a.end, a.label])
+  }));
+  const out = lines.join("\n");
+  el("jsonl").textContent = out || "Nothing annotated yet — mark a span first.";
+  el("export-card").style.display = "block";
+  el("export-card").scrollIntoView({behavior:"smooth", block:"nearest"});
+  el("btn-copy").onclick = async e=>{
+    try{ await navigator.clipboard.writeText(out); e.target.textContent="Copied"; }
+    catch(err){ e.target.textContent="Select text above"; }
+    setTimeout(()=>{ e.target.textContent="Copy JSONL"; }, 1600);
+  };
+};
+
+document.addEventListener("keydown", e=>{
+  if(/^(INPUT|TEXTAREA)$/.test(e.target.tagName)) return;
+  if(/^[1-5]$/.test(e.key)){
+    const l = LABELS[+e.key-1];
+    if(l){ active = l.id; el("active-label").textContent = l.name; applySelection(); renderLabels(); }
+  } else if(e.key === "Escape"){
+    active = null; el("active-label").textContent = "None"; renderLabels();
+  } else if(e.key === "ArrowRight" && !window.getSelection().toString()){
+    el("btn-next").click();
+  } else if(e.key === "ArrowLeft" && !window.getSelection().toString()){
+    el("btn-prev").click();
+  }
+});
+
+function esc(s){ return String(s).replace(/[&<>"']/g, c=>({ "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;" }[c])); }
+
+renderDoc();
+</script>
+</body>
+</html>
