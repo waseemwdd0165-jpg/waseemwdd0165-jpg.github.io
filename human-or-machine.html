@@ -1,0 +1,899 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Human or Machine? - Waseem Ansari</title>
+<meta name="description" content="A multiplayer party game. Read a response, decide whether a person or a language model wrote it. Join with a room code, no login, no install.">
+
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="Waseem Ahmad Ansari">
+<meta property="og:url" content="https://waseemwdd0165-jpg.github.io/human-or-machine.html">
+<meta property="og:title" content="Human or Machine?">
+<meta property="og:description" content="A multiplayer party game built on seven years of rating AI output. Read a response, call it human or machine, see who reads text best.">
+<meta property="og:image" content="https://waseemwdd0165-jpg.github.io/og-cover.png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="Human or Machine?">
+<meta name="twitter:description" content="Read a response, call it human or machine. Multiplayer, room code, no login.">
+<meta name="twitter:image" content="https://waseemwdd0165-jpg.github.io/og-cover.png">
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/peerjs/1.5.4/peerjs.min.js"></script>
+
+<style>
+:root{
+  --ground:#080A11;
+  --panel:rgba(255,255,255,.035);
+  --line:rgba(255,255,255,.09);
+  --ink:#F2F4F9;
+  --muted:#9AA3B8;
+  --dim:#6A7390;
+  --accent:#5B7CFF;
+  --accent-soft:rgba(91,124,255,.14);
+  --good:#3ECF8E;
+  --bad:#FF6B6B;
+  --radius:14px;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%}
+body{
+  background:var(--ground);
+  color:var(--ink);
+  font:16px/1.55 "IBM Plex Sans",-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;
+  -webkit-font-smoothing:antialiased;
+  min-height:100vh;
+  padding:20px 16px 48px;
+}
+body::before{
+  content:"";position:fixed;inset:0;z-index:-2;pointer-events:none;
+  background:
+    radial-gradient(620px 420px at 12% 8%, rgba(91,124,255,.16), transparent 70%),
+    radial-gradient(520px 380px at 88% 92%, rgba(91,124,255,.10), transparent 70%);
+}
+body::after{
+  content:"";position:fixed;inset:0;z-index:-1;pointer-events:none;opacity:.5;
+  background-image:
+    linear-gradient(rgba(255,255,255,.022) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255,255,255,.022) 1px, transparent 1px);
+  background-size:64px 64px;
+}
+.wrap{max-width:720px;margin:0 auto}
+
+header.top{margin-bottom:26px}
+.eyebrow{
+  font:500 11px/1 "IBM Plex Mono",ui-monospace,monospace;
+  letter-spacing:.16em;text-transform:uppercase;color:var(--accent);
+  margin-bottom:10px;
+}
+h1{
+  font-size:clamp(28px,6vw,40px);line-height:1.08;letter-spacing:-.02em;
+  font-weight:800;margin-bottom:10px;
+}
+.tagline{color:var(--muted);font-size:15px;max-width:52ch}
+.backlink{
+  display:inline-block;margin-top:16px;color:var(--muted);
+  text-decoration:none;font-size:13px;border-bottom:1px solid var(--line);
+  padding-bottom:2px;
+}
+.backlink:hover{color:var(--ink)}
+
+.card{
+  background:var(--panel);
+  border:1px solid var(--line);
+  border-radius:var(--radius);
+  padding:22px;
+  backdrop-filter:blur(8px);
+  margin-bottom:16px;
+}
+.card h2{font-size:17px;font-weight:600;margin-bottom:6px;letter-spacing:-.01em}
+.card .sub{color:var(--muted);font-size:13.5px;margin-bottom:16px}
+
+label{display:block;font-size:12.5px;color:var(--muted);margin-bottom:6px}
+input[type=text]{
+  width:100%;padding:12px 14px;border-radius:10px;
+  background:rgba(0,0,0,.28);border:1px solid var(--line);
+  color:var(--ink);font-size:16px;font-family:inherit;
+}
+input[type=text]:focus{outline:none;border-color:var(--accent)}
+input.code{
+  font:600 22px/1 "IBM Plex Mono",ui-monospace,monospace;
+  letter-spacing:.24em;text-transform:uppercase;text-align:center;
+}
+
+button{
+  font:600 15px/1 inherit;cursor:pointer;border:0;border-radius:10px;
+  padding:13px 18px;background:var(--accent);color:#fff;width:100%;
+  transition:opacity .15s, transform .05s;
+}
+button:hover{opacity:.9}
+button:active{transform:translateY(1px)}
+button:disabled{opacity:.4;cursor:not-allowed}
+button.ghost{background:transparent;border:1px solid var(--line);color:var(--ink)}
+button.ghost:hover{border-color:var(--accent);opacity:1}
+.row{display:flex;gap:10px;margin-top:14px}
+.row button{width:auto;flex:1}
+
+.roomcode{
+  font:800 40px/1 "IBM Plex Mono",ui-monospace,monospace;
+  letter-spacing:.2em;text-align:center;color:var(--accent);
+  padding:18px 0 10px;
+}
+.copyhint{text-align:center;color:var(--dim);font-size:12.5px;margin-bottom:6px}
+
+ul.players{list-style:none;margin:14px 0 0}
+ul.players li{
+  display:flex;justify-content:space-between;align-items:center;
+  padding:10px 0;border-top:1px solid var(--line);font-size:14.5px;
+}
+ul.players li:first-child{border-top:0}
+.badge{
+  font:500 10.5px/1 "IBM Plex Mono",ui-monospace,monospace;
+  letter-spacing:.1em;text-transform:uppercase;color:var(--accent);
+  background:var(--accent-soft);padding:5px 8px;border-radius:5px;
+}
+.tick{color:var(--good);font-size:13px}
+.waiting{color:var(--dim);font-size:13px}
+
+.progress{
+  display:flex;justify-content:space-between;align-items:baseline;
+  font:500 12px/1 "IBM Plex Mono",ui-monospace,monospace;
+  letter-spacing:.1em;text-transform:uppercase;color:var(--dim);
+  margin-bottom:14px;
+}
+.bar{height:3px;background:rgba(255,255,255,.07);border-radius:2px;overflow:hidden;margin-bottom:20px}
+.bar > i{display:block;height:100%;background:var(--accent);transition:width .3s}
+
+blockquote{
+  font-size:16.5px;line-height:1.6;padding:18px 20px;
+  background:rgba(0,0,0,.26);border-left:2px solid var(--accent);
+  border-radius:0 10px 10px 0;white-space:pre-wrap;
+}
+.votes{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:18px}
+.votes button{padding:18px 12px;font-size:15px}
+.votes button span{display:block;font-weight:400;font-size:12px;color:rgba(255,255,255,.7);margin-top:4px}
+.votes button.pick-human{background:#2E4BA8}
+.votes button.pick-ai{background:#7A3FA8}
+
+.verdict{
+  font:700 13px/1 "IBM Plex Mono",ui-monospace,monospace;
+  letter-spacing:.14em;text-transform:uppercase;margin-bottom:12px;
+}
+.verdict.human{color:var(--good)}
+.verdict.ai{color:#C58BFF}
+.why{color:var(--muted);font-size:14px;margin-top:14px;padding-top:14px;border-top:1px solid var(--line)}
+.why b{color:var(--ink);font-weight:600}
+
+table.score{width:100%;border-collapse:collapse;margin-top:8px;font-size:14.5px}
+table.score td{padding:11px 0;border-top:1px solid var(--line)}
+table.score tr:first-child td{border-top:0}
+table.score td.n{text-align:right;font:600 15px/1 "IBM Plex Mono",ui-monospace,monospace}
+table.score td.rank{width:34px;color:var(--dim);font:500 13px/1 "IBM Plex Mono",ui-monospace,monospace}
+.lead td{color:var(--accent)}
+
+.status{
+  font:500 11.5px/1 "IBM Plex Mono",ui-monospace,monospace;
+  letter-spacing:.1em;text-transform:uppercase;color:var(--dim);
+  text-align:center;margin-top:18px;
+}
+#conn-status{
+  position:fixed;left:0;right:0;bottom:0;margin:0;padding:10px 16px;
+  background:rgba(8,10,17,.94);border-top:1px solid var(--line);
+  backdrop-filter:blur(6px);
+}
+#conn-status:empty{display:none}
+.banner{
+  border:1px solid rgba(255,107,107,.4);background:rgba(255,107,107,.08);
+  border-radius:10px;padding:14px 16px;margin-bottom:16px;
+  font-size:14px;line-height:1.5;color:#FFC9C9;
+}
+.banner b{display:block;color:var(--ink);font-weight:600;margin-bottom:4px}
+.err{color:var(--bad);font-size:13.5px;margin-top:12px}
+.hidden{display:none}
+@media(max-width:520px){
+  .votes{grid-template-columns:1fr}
+  .roomcode{font-size:32px}
+}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<header class="top">
+  <div class="eyebrow">Multiplayer Party Game</div>
+  <h1>Human or Machine?</h1>
+  <p class="tagline">Read a response. Decide whether a person wrote it or a language
+  model did. Everyone votes at once, then you find out who reads text best.</p>
+  <a class="backlink" href="index.html">Back to portfolio</a>
+</header>
+
+<!-- ============ LANDING ============ -->
+<section id="s-landing">
+  <div class="banner hidden" id="env-banner"></div>
+  <div class="card">
+    <h2>Start a room</h2>
+    <p class="sub">You become the host. Share the code and others join from any phone
+    or laptop. No login, nothing to install.</p>
+    <label for="host-name">Your name</label>
+    <input type="text" id="host-name" maxlength="14" placeholder="Waseem" autocomplete="off">
+    <div class="row"><button id="btn-create">Create room</button></div>
+  </div>
+
+  <div class="card">
+    <h2>Join a room</h2>
+    <p class="sub">Type the four letter code the host gives you.</p>
+    <label for="join-name">Your name</label>
+    <input type="text" id="join-name" maxlength="14" placeholder="Your name" autocomplete="off">
+    <label for="join-code" style="margin-top:14px">Room code</label>
+    <input type="text" id="join-code" class="code" maxlength="4" placeholder="ABCD" autocomplete="off">
+    <div class="row"><button class="ghost" id="btn-join">Join room</button></div>
+    <div class="err hidden" id="join-err"></div>
+  </div>
+</section>
+
+<!-- ============ LOBBY ============ -->
+<section id="s-lobby" class="hidden">
+  <div class="card">
+    <h2>Room code</h2>
+    <div class="roomcode" id="lobby-code">----</div>
+    <p class="copyhint" id="copy-hint">Tap the code to copy the join link</p>
+    <ul class="players" id="lobby-players"></ul>
+    <div class="row" id="host-controls">
+      <button id="btn-start" disabled>Start game</button>
+    </div>
+    <div class="status hidden" id="lobby-wait">Waiting for the host to start</div>
+  </div>
+</section>
+
+<!-- ============ ROUND ============ -->
+<section id="s-round" class="hidden">
+  <div class="card">
+    <div class="progress">
+      <span id="round-n">Round 1 of 8</span>
+      <span id="round-score">0 pts</span>
+    </div>
+    <div class="bar"><i id="round-bar" style="width:0%"></i></div>
+    <blockquote id="round-text"></blockquote>
+    <div class="votes" id="round-votes">
+      <button class="pick-human" data-vote="human">Human
+        <span>a person typed this</span></button>
+      <button class="pick-ai" data-vote="ai">Machine
+        <span>a model generated it</span></button>
+    </div>
+    <ul class="players" id="round-players"></ul>
+  </div>
+</section>
+
+<!-- ============ REVEAL ============ -->
+<section id="s-reveal" class="hidden">
+  <div class="card">
+    <div class="verdict" id="reveal-verdict"></div>
+    <blockquote id="reveal-text"></blockquote>
+    <div class="why" id="reveal-why"></div>
+    <ul class="players" id="reveal-players"></ul>
+    <div class="row" id="reveal-controls">
+      <button id="btn-next">Next round</button>
+    </div>
+    <div class="status hidden" id="reveal-wait">Waiting for the host</div>
+  </div>
+</section>
+
+<!-- ============ FINAL ============ -->
+<section id="s-final" class="hidden">
+  <div class="card">
+    <h2>Final scores</h2>
+    <p class="sub" id="final-sub"></p>
+    <table class="score" id="final-table"></table>
+    <div class="row" id="final-controls">
+      <button id="btn-again">Play again</button>
+    </div>
+  </div>
+  <div class="card">
+    <h2>Why this is harder than it looks</h2>
+    <p class="sub" style="margin:0">Machine text is not worse text. It is text with a
+    particular shape: balanced on both sides of a question, tidy where real life is
+    messy, and closing with a sentence that restates the opening. Human writing
+    commits to things, names specifics, and stops when the point is made. Once you
+    see that difference you cannot unsee it.</p>
+  </div>
+</section>
+
+<div class="status" id="conn-status"></div>
+
+</div>
+
+<script>
+/* ==========================================================================
+   Human or Machine?
+
+   Networking: WebRTC through PeerJS. The host holds authoritative state and
+   broadcasts it; clients send only their name and their vote. No server of
+   our own, which is what lets this sit on static hosting.
+
+   Message shapes
+     client -> host   {t:'join', name}
+                      {t:'vote', choice}
+                      {t:'again'}
+     host -> client   {t:'state', ...full snapshot}
+   ========================================================================== */
+
+/* ---------- content -------------------------------------------------------
+   Each item is one response plus the call and the reason. Swap these for
+   examples you have actually seen while rating; specifics beat invention.
+   ------------------------------------------------------------------------ */
+var ITEMS = [
+  {
+    text:"There are several factors to consider when choosing a replacement laptop battery. First, verify compatibility with your specific model. Second, consider the warranty offered by the manufacturer. Finally, weigh the cost against the expected lifespan. By taking these steps, you can make an informed decision.",
+    ai:true,
+    why:"Numbered scaffolding, not one model number or price, and a closing sentence that restates the opening. The shape of an answer rather than an answer."
+  },
+  {
+    text:"mine lasted about 14 months then just died one morning. dell xps 13, 2019 one. got a third party replacement off amazon for 2700, works fine but the battery meter reads about 10% high so i ignore it now.",
+    ai:false,
+    why:"A model, a year, a price, and a defect the writer has learned to live with. Nobody generates that combination."
+  },
+  {
+    text:"I appreciate you sharing that with me. It sounds like you are navigating a genuinely challenging situation, and it is completely understandable to feel this way. Remember that it is okay to take things one step at a time.",
+    ai:true,
+    why:"Reflective opener, validation, generic reassurance. Three moves in a row that an assistant makes and a friend does not."
+  },
+  {
+    text:"honestly just phone them. i wasted two weeks on their support form and got nothing back, rang once and it was sorted in about 6 minutes.",
+    ai:false,
+    why:"One opinion, one anecdote, timings that are oddly precise because they were annoying. No hedge anywhere."
+  },
+  {
+    text:"Both approaches have merit. The first offers greater flexibility and faster iteration, while the second provides more structure and clearer accountability. The best choice ultimately depends on your specific circumstances and priorities.",
+    ai:true,
+    why:"Perfectly balanced and commits to nothing. 'Ultimately depends on your specific circumstances' is the tell: it is unfalsifiable."
+  },
+  {
+    text:"we ran the structured version for a quarter and it was a mess, four approvals to change a label. went back to the loose one and nobody has complained since.",
+    ai:false,
+    why:"Picks a side, gives the concrete reason it failed, reports what happened next."
+  },
+  {
+    text:"Certainly! Here is a step by step guide to setting up your development environment. 1. Install the required dependencies. 2. Configure your environment variables. 3. Run the initialization script. 4. Verify the installation completed successfully. Let me know if you would like me to clarify any of these steps!",
+    ai:true,
+    why:"Opens with 'Certainly!' and closes by offering to clarify. The four steps would fit any project ever written, which means they help with none."
+  },
+  {
+    text:"heads up the init script dies on windows if your path has a space in it. cost me an hour. move the repo to c:\\dev and it runs.",
+    ai:false,
+    why:"An undocumented edge case plus the workaround. Only arrives from hitting it yourself."
+  },
+  {
+    text:"While I am not able to provide specific financial advice, I can share some general principles. Diversification, consistent contributions over time, and a clear understanding of your own risk tolerance are widely regarded as sound practices.",
+    ai:true,
+    why:"Disclaimer, pivot, safe generalities. The refuse-then-reassure pattern is close to a signature."
+  },
+  {
+    text:"i put everything into one index fund for four years because i could not be bothered to research properly. worked out fine but that was luck, do not copy me.",
+    ai:false,
+    why:"Admits laziness, then warns you off its own example. An assistant will not undercut the advice it just gave."
+  },
+  {
+    text:"That is a great question! The distinction is subtle but important. In essence, the former describes the process, while the latter refers to the outcome. Understanding this difference can help clarify a number of related concepts.",
+    ai:true,
+    why:"Compliments the question, then explains almost nothing. 'In essence' is carrying no weight at all."
+  },
+  {
+    text:"in practice people use them interchangeably and nobody on my team cares. the docs draw a line between them but the code never did.",
+    ai:false,
+    why:"Reports what actually happens over what is supposed to. Faintly resigned, which is a human register."
+  },
+  {
+    text:"Thank you for bringing this to my attention. I have carefully reviewed the details you provided and I understand your concern. Please rest assured that we take this matter seriously and will investigate the issue thoroughly.",
+    ai:true,
+    why:"Reassurance with no commitment, no owner and no date. Could be pasted into any complaint thread on earth."
+  },
+  {
+    text:"yeah thats a known one, ticket 4471, been open since march. workaround is refresh twice and it loads. sorry, i know thats rubbish.",
+    ai:false,
+    why:"Ticket number, a month, an ugly workaround, and an apology for the workaround."
+  },
+  {
+    text:"Absolutely, let us delve into this topic. Machine learning has transformed numerous industries, from healthcare to finance to logistics. Its applications continue to expand rapidly, offering unprecedented opportunities for innovation and operational efficiency.",
+    ai:true,
+    why:"'Delve', 'transformed', 'unprecedented', and a list of three industries with no example from any of them."
+  },
+  {
+    text:"we spent six months on a model that a sql query replaced in the end. the query was faster too. not my favourite project.",
+    ai:false,
+    why:"Failure reported without a silver lining. Models almost always redeem the story before finishing it."
+  },
+  {
+    text:"It is worth noting that results may vary depending on a range of factors. I would recommend consulting the official documentation for the most up to date information, as features and requirements can change over time.",
+    ai:true,
+    why:"Two hedges and a redirect to the docs. Nothing here could ever be wrong, which is the problem."
+  },
+  {
+    text:"docs are out of date on this, the flag got renamed in 2.4. use --output-dir, not --outdir. took me ages to work out why nothing was writing.",
+    ai:false,
+    why:"Contradicts the documentation, names the version, gives both spellings of the flag."
+  }
+];
+
+var ROUNDS = 8;
+
+/* ---------- tiny helpers ------------------------------------------------- */
+function $(id){ return document.getElementById(id); }
+function show(id){
+  var all = ['s-landing','s-lobby','s-round','s-reveal','s-final'];
+  for (var i=0;i<all.length;i++){ $(all[i]).classList.add('hidden'); }
+  $(id).classList.remove('hidden');
+}
+function esc(s){
+  return String(s).replace(/[&<>"']/g, function(c){
+    return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];
+  });
+}
+function shuffle(a){
+  a = a.slice();
+  for (var i=a.length-1;i>0;i--){
+    var j = Math.floor(Math.random()*(i+1));
+    var t = a[i]; a[i] = a[j]; a[j] = t;
+  }
+  return a;
+}
+function code4(){
+  var letters = 'ABCDEFGHJKLMNPQRSTUVWXYZ';  /* no I or O, they misread aloud */
+  var s = '';
+  for (var i=0;i<4;i++){ s += letters[Math.floor(Math.random()*letters.length)]; }
+  return s;
+}
+function status(msg){ $('conn-status').textContent = msg || ''; }
+
+/* A loud failure beats a dead button. Anything that stops the game before it
+   starts gets explained here rather than swallowed by the console. */
+function banner(title, body){
+  var el = $('env-banner');
+  el.innerHTML = '<b>' + esc(title) + '</b>' + esc(body);
+  el.classList.remove('hidden');
+}
+
+/* Both entry points need the same two things: the PeerJS library and a browser
+   that speaks WebRTC. Check once, report plainly, and stop. */
+function envReady(){
+  if (typeof Peer === 'undefined'){
+    banner('The networking library did not load',
+      'human-or-machine.html pulls PeerJS from a CDN. That request was blocked, ' +
+      'which happens on offline machines and inside sandboxed previews. Open the ' +
+      'page on a normal connection and it will work.');
+    return false;
+  }
+  if (!window.RTCPeerConnection){
+    banner('This browser cannot do WebRTC',
+      'The game connects players directly, browser to browser, so it needs WebRTC. ' +
+      'Current Chrome, Edge, Firefox and Safari all support it.');
+    return false;
+  }
+  return true;
+}
+
+/* ---------- state -------------------------------------------------------- */
+var ME = { name:'', isHost:false, id:null };
+var peer = null;
+var conns = [];        /* host: open DataConnections */
+var hostConn = null;   /* client: link back to host */
+var room = null;       /* host: authoritative game state */
+var view = null;       /* client: last snapshot received */
+var myVote = null;
+
+/* ==========================================================================
+   HOST
+   ========================================================================== */
+function createRoom(){
+  if (!envReady()) return;
+  var name = ($('host-name').value || 'Host').trim().slice(0,14);
+  ME.name = name; ME.isHost = true;
+
+  var rc = code4();
+  status('Opening room...');
+
+  peer = new Peer('hom-' + rc, { debug:0 });
+
+  /* If the signalling handshake never completes, say so instead of spinning. */
+  var opened = false;
+  setTimeout(function(){
+    if (!opened){
+      banner('Could not reach the signalling server',
+        'Players find each other through a public PeerJS server before talking ' +
+        'directly. That connection timed out, usually a firewall or a corporate ' +
+        'network blocking WebSockets. Try another network.');
+      status('');
+    }
+  }, 10000);
+
+  peer.on('open', function(){
+    opened = true;
+    room = {
+      code: rc,
+      phase: 'lobby',
+      round: 0,
+      deck: shuffle(ITEMS).slice(0, ROUNDS),
+      players: [{ id:'host', name:name, score:0, vote:null, wasRight:null }]
+    };
+    ME.id = 'host';
+    renderLobby();
+    show('s-lobby');
+    status('Room open. Code ' + rc);
+  });
+
+  peer.on('connection', function(c){
+    conns.push(c);
+    c.on('data', function(msg){ onHostMessage(c, msg); });
+    c.on('close', function(){
+      conns = conns.filter(function(x){ return x !== c; });
+      if (room){
+        room.players = room.players.filter(function(p){ return p.id !== c.peer; });
+        broadcast(); renderLobby();
+      }
+    });
+  });
+
+  peer.on('error', function(e){
+    /* the code is already taken, which means a live room owns it */
+    if (String(e.type) === 'unavailable-id'){
+      status('That code is in use, retrying...');
+      try { peer.destroy(); } catch(_){}
+      setTimeout(createRoom, 150);
+    } else {
+      status('Connection problem: ' + e.type);
+    }
+  });
+}
+
+function onHostMessage(c, msg){
+  if (!room || !msg) return;
+
+  if (msg.t === 'join'){
+    if (room.phase !== 'lobby'){ c.send({ t:'state', closed:true }); return; }
+    room.players.push({
+      id: c.peer,
+      name: String(msg.name || 'Player').slice(0,14),
+      score: 0, vote: null, wasRight: null
+    });
+    broadcast(); renderLobby();
+  }
+
+  if (msg.t === 'vote' && room.phase === 'round'){
+    var p = room.players.filter(function(x){ return x.id === c.peer; })[0];
+    if (p && p.vote === null){
+      p.vote = msg.choice;
+      scoreIfComplete();
+      broadcast(); hostRender();
+    }
+  }
+
+  if (msg.t === 'again' && room.phase === 'final'){ hostRestart(); }
+}
+
+/* The host has no state message to react to, so it draws itself from the same
+   phase the clients are sent. One function, so the host can never get stranded
+   on a screen everyone else has left. */
+function hostRender(){
+  if (!room) return;
+  if (room.phase === 'lobby'){  renderLobby();  show('s-lobby');  }
+  if (room.phase === 'round'){  renderRound();  show('s-round');  }
+  if (room.phase === 'reveal'){ renderReveal(); show('s-reveal'); }
+  if (room.phase === 'final'){  renderFinal();  show('s-final');  }
+}
+
+function broadcast(){
+  if (!room) return;
+  var snap = {
+    t:'state',
+    phase: room.phase,
+    code: room.code,
+    round: room.round,
+    total: room.deck.length,
+    item: (room.phase === 'round' || room.phase === 'reveal')
+            ? room.deck[room.round] : null,
+    reveal: room.phase === 'reveal' || room.phase === 'final',
+    players: room.players.map(function(p){
+      return { id:p.id, name:p.name, score:p.score,
+               voted: p.vote !== null, wasRight:p.wasRight };
+    })
+  };
+  for (var i=0;i<conns.length;i++){
+    try { conns[i].send(snap); } catch(_){}
+  }
+}
+
+function everyoneVoted(){
+  return room.players.every(function(p){ return p.vote !== null; });
+}
+
+function scoreIfComplete(){
+  if (!everyoneVoted()) return;
+  var truth = room.deck[room.round].ai ? 'ai' : 'human';
+  room.players.forEach(function(p){
+    p.wasRight = (p.vote === truth);
+    if (p.wasRight) p.score += 10;
+  });
+  room.phase = 'reveal';
+}
+
+function hostStart(){
+  room.phase = 'round';
+  room.round = 0;
+  room.players.forEach(function(p){ p.vote = null; p.wasRight = null; });
+  myVote = null;
+  broadcast(); hostRender();
+}
+
+function hostNext(){
+  if (room.round + 1 >= room.deck.length){
+    room.phase = 'final';
+    broadcast(); hostRender();
+    return;
+  }
+  room.round += 1;
+  room.phase = 'round';
+  room.players.forEach(function(p){ p.vote = null; p.wasRight = null; });
+  myVote = null;
+  broadcast(); hostRender();
+}
+
+function hostRestart(){
+  room.deck = shuffle(ITEMS).slice(0, ROUNDS);
+  room.round = 0;
+  room.phase = 'round';
+  room.players.forEach(function(p){ p.score = 0; p.vote = null; p.wasRight = null; });
+  myVote = null;
+  broadcast(); hostRender();
+}
+
+function hostVote(choice){
+  var me = room.players[0];
+  if (room.phase !== 'round' || me.vote !== null) return;
+  me.vote = choice; myVote = choice;
+  scoreIfComplete();
+  broadcast(); hostRender();
+}
+
+/* ==========================================================================
+   CLIENT
+   ========================================================================== */
+function joinRoom(){
+  if (!envReady()) return;
+  var name = ($('join-name').value || 'Player').trim().slice(0,14);
+  var rc = ($('join-code').value || '').trim().toUpperCase();
+
+  if (rc.length !== 4){
+    $('join-err').textContent = 'The room code is four letters.';
+    $('join-err').classList.remove('hidden');
+    return;
+  }
+  $('join-err').classList.add('hidden');
+  ME.name = name; ME.isHost = false;
+  status('Connecting to ' + rc + '...');
+
+  peer = new Peer(null, { debug:0 });
+
+  peer.on('open', function(){
+    hostConn = peer.connect('hom-' + rc, { reliable:true });
+
+    hostConn.on('open', function(){
+      hostConn.send({ t:'join', name:name });
+      status('Connected to room ' + rc);
+      $('host-controls').classList.add('hidden');
+      $('lobby-wait').classList.remove('hidden');
+      $('lobby-code').textContent = rc;
+      $('copy-hint').textContent = 'You are in. Waiting for the others.';
+      show('s-lobby');
+    });
+
+    hostConn.on('data', function(msg){ onClientMessage(msg); });
+
+    hostConn.on('close', function(){
+      status('The host closed the room.');
+    });
+
+    hostConn.on('error', function(){
+      $('join-err').textContent = 'Could not reach that room. Check the code.';
+      $('join-err').classList.remove('hidden');
+    });
+  });
+
+  peer.on('error', function(e){
+    var m = (String(e.type) === 'peer-unavailable')
+      ? 'No room with that code is open right now.'
+      : 'Connection problem: ' + e.type;
+    $('join-err').textContent = m;
+    $('join-err').classList.remove('hidden');
+    status('');
+  });
+}
+
+function onClientMessage(msg){
+  if (!msg || msg.t !== 'state') return;
+
+  if (msg.closed){
+    $('join-err').textContent = 'That game has already started.';
+    $('join-err').classList.remove('hidden');
+    show('s-landing');
+    return;
+  }
+
+  var newRound = (view && view.round !== msg.round);
+  view = msg;
+  if (newRound) myVote = null;
+
+  if (msg.phase === 'lobby'){ renderLobby(); show('s-lobby'); }
+  if (msg.phase === 'round'){ renderRound(); show('s-round'); }
+  if (msg.phase === 'reveal'){ renderReveal(); show('s-reveal'); }
+  if (msg.phase === 'final'){ renderFinal(); show('s-final'); }
+}
+
+function clientVote(choice){
+  if (myVote !== null || !hostConn) return;
+  myVote = choice;
+  hostConn.send({ t:'vote', choice:choice });
+  renderRound();
+}
+
+/* ==========================================================================
+   RENDER  (both roles read through these accessors)
+   ========================================================================== */
+function playersNow(){
+  if (ME.isHost && room){
+    return room.players.map(function(p){
+      return { id:p.id, name:p.name, score:p.score,
+               voted:p.vote !== null, wasRight:p.wasRight };
+    });
+  }
+  return (view && view.players) || [];
+}
+function itemNow(){
+  if (ME.isHost && room) return room.deck[room.round];
+  return view && view.item;
+}
+function roundNow(){ return ME.isHost && room ? room.round : (view ? view.round : 0); }
+function totalNow(){ return ME.isHost && room ? room.deck.length : (view ? view.total : ROUNDS); }
+function myScore(){
+  var id = ME.isHost ? 'host' : (peer && peer.id);
+  var me = playersNow().filter(function(p){ return p.id === id; })[0];
+  return me ? me.score : 0;
+}
+
+function renderLobby(){
+  var ps = playersNow();
+  $('lobby-code').textContent = ME.isHost ? room.code : (view && view.code) || '----';
+  $('lobby-players').innerHTML = ps.map(function(p,i){
+    return '<li><span>' + esc(p.name) + '</span>' +
+           (i === 0 ? '<span class="badge">host</span>' : '<span class="waiting">ready</span>') +
+           '</li>';
+  }).join('');
+  if (ME.isHost){
+    $('btn-start').disabled = ps.length < 2;
+    $('btn-start').textContent = ps.length < 2
+      ? 'Waiting for one more player'
+      : 'Start game (' + ps.length + ' players)';
+  }
+}
+
+function renderRound(){
+  var it = itemNow(); if (!it) return;
+  var ps = playersNow();
+
+  $('round-n').textContent = 'Round ' + (roundNow()+1) + ' of ' + totalNow();
+  $('round-score').textContent = myScore() + ' pts';
+  $('round-bar').style.width = ((roundNow()) / totalNow() * 100) + '%';
+  $('round-text').textContent = it.text;
+
+  var btns = $('round-votes').querySelectorAll('button');
+  for (var i=0;i<btns.length;i++){ btns[i].disabled = (myVote !== null); }
+
+  $('round-players').innerHTML = ps.map(function(p){
+    return '<li><span>' + esc(p.name) + '</span>' +
+      (p.voted ? '<span class="tick">voted</span>'
+               : '<span class="waiting">thinking</span>') + '</li>';
+  }).join('');
+}
+
+function renderReveal(){
+  var it = itemNow(); if (!it) return;
+  var ps = playersNow();
+
+  $('reveal-verdict').className = 'verdict ' + (it.ai ? 'ai' : 'human');
+  $('reveal-verdict').textContent = it.ai
+    ? 'A language model wrote this'
+    : 'A person wrote this';
+  $('reveal-text').textContent = it.text;
+  $('reveal-why').innerHTML = '<b>What gives it away.</b> ' + esc(it.why);
+
+  $('reveal-players').innerHTML = ps.map(function(p){
+    var mark = p.wasRight === true  ? '<span class="tick">correct, +10</span>'
+             : p.wasRight === false ? '<span class="err" style="margin:0">wrong</span>'
+             : '<span class="waiting">-</span>';
+    return '<li><span>' + esc(p.name) + '</span>' + mark + '</li>';
+  }).join('');
+
+  if (ME.isHost){
+    $('reveal-controls').classList.remove('hidden');
+    $('reveal-wait').classList.add('hidden');
+    $('btn-next').textContent = (roundNow()+1 >= totalNow())
+      ? 'See final scores' : 'Next round';
+  } else {
+    $('reveal-controls').classList.add('hidden');
+    $('reveal-wait').classList.remove('hidden');
+  }
+}
+
+function renderFinal(){
+  var ps = playersNow().slice().sort(function(a,b){ return b.score - a.score; });
+  var top = ps[0];
+  var best = totalNow() * 10;
+
+  $('final-sub').textContent = top
+    ? top.name + ' read them best, ' + top.score + ' out of ' + best + '.'
+    : '';
+
+  $('final-table').innerHTML = ps.map(function(p,i){
+    return '<tr' + (i === 0 ? ' class="lead"' : '') + '>' +
+           '<td class="rank">' + (i+1) + '</td>' +
+           '<td>' + esc(p.name) + '</td>' +
+           '<td class="n">' + p.score + '</td></tr>';
+  }).join('');
+
+  if (ME.isHost){
+    $('final-controls').classList.remove('hidden');
+  } else {
+    $('final-controls').classList.add('hidden');
+  }
+}
+
+/* ==========================================================================
+   WIRING
+   ========================================================================== */
+$('btn-create').onclick = createRoom;
+$('btn-join').onclick = joinRoom;
+$('btn-start').onclick = function(){ if (ME.isHost) hostStart(); };
+$('btn-next').onclick  = function(){ if (ME.isHost) hostNext(); };
+$('btn-again').onclick = function(){
+  if (ME.isHost) hostRestart();
+  else if (hostConn) hostConn.send({ t:'again' });
+};
+
+$('round-votes').addEventListener('click', function(e){
+  var b = e.target.closest('button'); if (!b) return;
+  var choice = b.getAttribute('data-vote');
+  if (ME.isHost) hostVote(choice); else clientVote(choice);
+});
+
+/* uppercase the code as it is typed, and allow Enter to join */
+$('join-code').addEventListener('input', function(){
+  this.value = this.value.toUpperCase().replace(/[^A-Z]/g,'');
+});
+$('join-code').addEventListener('keydown', function(e){
+  if (e.key === 'Enter') joinRoom();
+});
+
+/* tap the room code to copy a join link */
+$('lobby-code').addEventListener('click', function(){
+  var rc = this.textContent.trim();
+  if (rc === '----') return;
+  var link = location.origin + location.pathname + '?room=' + rc;
+  if (navigator.clipboard){
+    navigator.clipboard.writeText(link).then(function(){
+      $('copy-hint').textContent = 'Join link copied';
+      setTimeout(function(){
+        $('copy-hint').textContent = 'Tap the code to copy the join link';
+      }, 1800);
+    }).catch(function(){});
+  }
+});
+
+/* ?room=ABCD prefills the join box so a shared link lands ready to go */
+(function(){
+  var m = location.search.match(/room=([A-Za-z]{4})/);
+  if (m){
+    $('join-code').value = m[1].toUpperCase();
+    $('join-name').focus();
+  }
+})();
+</script>
+</body>
+</html>
