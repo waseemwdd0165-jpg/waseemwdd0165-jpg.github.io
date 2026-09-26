@@ -169,6 +169,8 @@ canvas{position:absolute;inset:0;width:100%;height:100%;display:block;touch-acti
         <li>Runners win by reaching the green exit. A faint marker at the screen edge points the way.</li>
         <li>A caught runner joins the hunt, so the odds shift every time somebody falls.</li>
         <li>Three rounds. Escaping scores 100, catching scores 50.</li>
+        <li>The host has to keep this page open. Closing it or reloading ends the
+        room, and the code stops working for everybody.</li>
       </ul>
     </div>
   </section>
@@ -349,11 +351,13 @@ function createRoom(){
   ME.isHost = true;
   var rc = code4();
   status('Opening room...');
+  busy($('btn-create'), 'Opening room...');
 
   peer = new Peer('pb-' + rc, { debug:0 });
   var opened = false;
   setTimeout(function(){
     if (!opened){
+      free($('btn-create'), 'Create room');
       banner('Could not reach the signalling server',
         'Players find each other through a public server before connecting directly. ' +
         'That timed out, usually a firewall blocking WebSockets. Try another network.');
@@ -363,6 +367,7 @@ function createRoom(){
 
   peer.on('open', function(){
     opened = true;
+    free($('btn-create'), 'Create room');
     ME.id = 'host';
     room = {
       code: rc, phase:'lobby', round:0,
@@ -601,10 +606,27 @@ function joinRoom(){
   ME.name = name; ME.isHost = false;
   status('Connecting to ' + rc + '...');
 
+  /* A button that does nothing looks broken even when it is only waiting, so
+     say so immediately and give up out loud rather than hanging for ever. */
+  var joined = false;
+  busy($('btn-join'), 'Connecting to ' + rc + '...');
+  var giveUp = setTimeout(function(){
+    if (joined) return;
+    try { if (peer) peer.destroy(); } catch(_){}
+    peer = null; hostConn = null;
+    free($('btn-join'), 'Join room');
+    joinFailed('No answer from room ' + rc + '. The host needs the page still ' +
+               'open on their device, and the code has to be from this session. ' +
+               'If it is, your network may be blocking the connection.');
+  }, 12000);
+
   peer = new Peer(null, { debug:0 });
   peer.on('open', function(){
     hostConn = peer.connect('pb-' + rc, { reliable:false });
     hostConn.on('open', function(){
+      joined = true;
+      clearTimeout(giveUp);
+      free($('btn-join'), 'Join room');
       hostConn.send({ t:'join', name:name });
       ME.id = peer.id;
       status('Connected to ' + rc);
@@ -619,12 +641,24 @@ function joinRoom(){
     hostConn.on('close', function(){ status('The host closed the room.'); });
   });
   peer.on('error', function(e){
-    $('join-err').textContent = (String(e.type) === 'peer-unavailable')
-      ? 'No room with that code is open right now.' : 'Connection problem: ' + e.type;
-    $('join-err').classList.remove('hidden');
-    status('');
+    if (joined) return;
+    clearTimeout(giveUp);
+    free($('btn-join'), 'Join room');
+    joinFailed(String(e.type) === 'peer-unavailable'
+      ? 'No room called ' + rc + ' is open. Check the letters, and check the host ' +
+        'still has their page open, because closing it ends the room.'
+      : 'Connection problem: ' + e.type);
   });
 }
+
+function joinFailed(msg){
+  $('join-err').textContent = msg;
+  $('join-err').classList.remove('hidden');
+  try { $('join-err').scrollIntoView({ block:'center' }); } catch(_){}
+  status('');
+}
+function busy(btn, label){ btn.disabled = true; btn._was = btn.textContent; btn.textContent = label; }
+function free(btn, label){ btn.disabled = false; btn.textContent = label; }
 
 function sendInput(){
   if (!hostConn || !hostConn.open) return;
@@ -634,12 +668,17 @@ function sendInput(){
 function onClientMessage(m){
   if (!m) return;
   if (m.t === 'closed'){
-    $('join-err').textContent = 'That game has already started.';
-    $('join-err').classList.remove('hidden'); showMenu('s-landing'); return;
+    showMenu('s-landing');
+    free($('btn-join'), 'Join room');
+    joinFailed('That game has already started. Ask the host to finish the match, ' +
+               'then join from the lobby.');
+    return;
   }
   if (m.t === 'full'){
-    $('join-err').textContent = 'That room is full, eight players is the limit.';
-    $('join-err').classList.remove('hidden'); showMenu('s-landing'); return;
+    showMenu('s-landing');
+    free($('btn-join'), 'Join room');
+    joinFailed('That room is full. Eight players is the limit.');
+    return;
   }
   if (m.t !== 's') return;
 
