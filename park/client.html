@@ -1004,17 +1004,37 @@ function poseFor(mesh, p, dt){
 }
 
 var camReady = false;
+
+/* How tall the stuff on a tile is, roughly. Used to stop the camera from
+   swinging back through a tree, which is the one thing that makes a third
+   person view unusable. */
+function blockHeight(x, z){
+  var c = cell(Math.floor(x), Math.floor(z));
+  if (c === 'T') return 7;      /* trunk plus crown */
+  if (c === 'f') return 2;
+  if (c === 'X') return 0.4;
+  return 0;
+}
+
 function updateCamera(){
   var tx = me.x, ty = me.h + 1.45, tz = me.z;
-  var cx = tx - Math.sin(camYaw) * Math.cos(camPitch) * camDist;
-  var cz = tz - Math.cos(camYaw) * Math.cos(camPitch) * camDist;
-  var cy = ty + Math.sin(camPitch) * camDist;
-  var want = new THREE.Vector3(cx, Math.max(1.2, cy), cz);
+  var dx = -Math.sin(camYaw) * Math.cos(camPitch);
+  var dz = -Math.cos(camYaw) * Math.cos(camPitch);
+  var dy =  Math.sin(camPitch);
+
+  /* walk out along the camera arm and stop at the first thing in the way */
+  var dist = camDist;
+  for (var d = 0.6; d <= camDist; d += 0.4){
+    var px = tx + dx * d, pz = tz + dz * d, py = ty + dy * d;
+    if (py < blockHeight(px, pz) + 0.35){ dist = Math.max(2.2, d - 0.6); break; }
+  }
+
+  var want = new THREE.Vector3(tx + dx * dist, Math.max(1.1, ty + dy * dist), tz + dz * dist);
   /* Snap the first time. Easing in from the world origin meant the first
      second of every session was spent inside whatever stood at the corner
      of the map. */
   if (!camReady){ camera.position.copy(want); camReady = true; }
-  else camera.position.lerp(want, 0.14);
+  else camera.position.lerp(want, 0.2);
   camera.lookAt(tx, ty, tz);
 }
 
