@@ -1,0 +1,15 @@
+{
+  "name": "pitch-black",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "A multiplayer stealth game played in the dark. The server holds the only copy of the map state and tells each player only what their own torch reaches.",
+  "scripts": {
+    "dev": "wrangler dev",
+    "deploy": "wrangler deploy",
+    "test": "node test/arena.mjs && node test/culling.mjs"
+  },
+  "devDependencies": {
+    "wrangler": "^4.0.0"
+  }
+}

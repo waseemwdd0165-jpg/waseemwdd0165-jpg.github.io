@@ -1,0 +1,21 @@
+name = "pitch-black"
+main = "src/index.js"
+compatibility_date = "2026-01-01"
+
+# The game itself. Everything in public/ is served straight from the edge,
+# so the Worker only has to deal with the WebSocket.
+[assets]
+directory = "./public"
+binding = "ASSETS"
+
+# One Durable Object per room. The room code is the object's name, so two
+# players typing the same four letters land in the same object no matter
+# which side of the world they are on.
+[[durable_objects.bindings]]
+name = "ARENA"
+class_name = "Arena"
+
+# SQLite-backed classes are the ones available on the free plan.
+[[migrations]]
+tag = "v1"
+new_sqlite_classes = ["Arena"]
