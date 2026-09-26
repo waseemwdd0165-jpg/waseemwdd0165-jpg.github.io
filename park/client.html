@@ -11,7 +11,7 @@
 
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Pixelify+Sans:wght@400;600;700&family=VT323&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Pixelify+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 
 <style>
@@ -28,12 +28,12 @@
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
 html,body{height:100%;overflow:hidden;background:#0B0B0B}
 body{
-  font:16px/1.5 "VT323", ui-monospace, monospace;
+  font:500 17px/1.45 "Pixelify Sans", ui-monospace, monospace;
   color:var(--ink); image-rendering:pixelated;
 }
 canvas{display:block;image-rendering:pixelated}
 
-.px{ font-family:"Pixelify Sans", "VT323", monospace; letter-spacing:.02em; }
+.px{ font-family:"Pixelify Sans", monospace; letter-spacing:.02em; }
 .shadow{ text-shadow:2px 2px 0 var(--shade); }
 
 /* the classic chunky bevelled slab */
@@ -71,36 +71,44 @@ canvas{display:block;image-rendering:pixelated}
 @keyframes clouds{ to{ transform:translateX(22%) } }
 
 #gate .box{
-  position:relative;max-width:440px;width:100%;
+  position:relative;max-width:380px;width:100%;
   background:rgba(16,16,16,.84);
   border-top:4px solid #6E6E6E; border-left:4px solid #6E6E6E;
   border-bottom:4px solid #1C1C1C; border-right:4px solid #1C1C1C;
   outline:3px solid #0B0B0B;
-  padding:28px 22px 24px;
+  padding:24px 20px 20px;
 }
 #gate h1{
   font:700 clamp(26px,6.6vw,40px)/1.2 "Pixelify Sans", monospace;
   margin-bottom:10px;text-shadow:3px 3px 0 #2A2A2A;
 }
 #gate h1 span{ color:var(--gold) }
-#gate p{ color:#CFCFCF;font-size:21px;margin-bottom:20px;line-height:1.3 }
+#gate p{ color:#CFCFCF;font-size:17px;margin-bottom:18px;line-height:1.35 }
 #gate input{
-  width:100%;padding:12px 14px;font:24px "VT323", monospace;text-align:center;
+  width:100%;padding:12px 14px;font:600 20px "Pixelify Sans", monospace;text-align:center;
   background:#0C0C0C;color:#fff;
   border-top:3px solid #2C2C2C;border-left:3px solid #2C2C2C;
   border-bottom:3px solid #6E6E6E;border-right:3px solid #6E6E6E;
 }
 #gate input:focus{ outline:2px solid var(--gold);outline-offset:1px }
 #gate button{
-  width:100%;margin-top:14px;padding:15px;cursor:pointer;
-  font:700 21px "Pixelify Sans", monospace;text-shadow:2px 2px 0 #2F2F2F;
+  width:100%;margin-top:12px;padding:15px;cursor:pointer;color:#fff;
+  font:700 21px "Pixelify Sans", monospace;text-shadow:2px 2px 0 #2A5218;
+  background:#4C9B31;
+  border-top:4px solid #77C457;border-left:4px solid #77C457;
+  border-bottom:4px solid #2C6218;border-right:4px solid #2C6218;
+}
+#gate button:active{
+  border-top-color:#2C6218;border-left-color:#2C6218;
+  border-bottom-color:#77C457;border-right-color:#77C457;
 }
 #gate button:disabled{ opacity:.55;cursor:not-allowed }
-#gate .err{ color:#FF6B6B;font-size:20px;margin-top:12px;min-height:24px }
+#gate .err{ color:#FF7A7A;font-size:16px;margin-top:10px;min-height:20px }
 #gate .tips{
-  margin-top:20px;padding-top:16px;border-top:3px solid #2E2E2E;
-  color:#B9B9B9;font-size:20px;line-height:1.55;text-align:left;
+  margin-top:16px;padding-top:14px;border-top:3px solid #2E2E2E;
+  color:#C4C4C4;font-size:16px;line-height:1.5;text-align:left;
 }
+#gate .tips div{ margin-bottom:5px }
 #gate .tips b{ color:var(--gold);font-weight:400 }
 
 /* ---------- hud ---------- */
@@ -124,7 +132,7 @@ canvas{display:block;image-rendering:pixelated}
 }
 
 #prompt{
-  position:fixed;left:50%;bottom:140px;transform:translateX(-50%);z-index:20;
+  position:fixed;left:50%;bottom:172px;transform:translateX(-50%);z-index:20;
   background:var(--panel);
   border-top:3px solid #6E6E6E;border-left:3px solid #6E6E6E;
   border-bottom:3px solid #1C1C1C;border-right:3px solid #1C1C1C;
@@ -155,19 +163,26 @@ canvas{display:block;image-rendering:pixelated}
 /* the hotbar: one row of chunky buttons along the bottom */
 #buttons{
   position:fixed;left:50%;bottom:16px;transform:translateX(-50%);z-index:20;
-  display:flex;gap:8px;align-items:flex-end;
+  display:flex;flex-direction:column;align-items:center;gap:8px;
 }
+#buttons .row{ display:flex;gap:8px;justify-content:center }
 .btn{
   pointer-events:auto;cursor:pointer;
   font:700 17px "Pixelify Sans",monospace;text-shadow:2px 2px 0 #2F2F2F;
-  padding:14px 16px;min-width:74px;
+  padding:13px 16px;min-width:84px;text-align:center;
+  /* this is what was missing: without it the browser drew plain white boxes */
+  background:var(--stone);color:#fff;
+  border-top:3px solid var(--stone-lt);border-left:3px solid var(--stone-lt);
+  border-bottom:3px solid var(--stone-dk);border-right:3px solid var(--stone-dk);
+}
+.btn:hover{ background:#9A9A9A }
+.btn:active{
+  border-top-color:var(--stone-dk);border-left-color:var(--stone-dk);
+  border-bottom-color:var(--stone-lt);border-right-color:var(--stone-lt);
 }
 .btn.go{ background:#4C9B31;border-top-color:#77C457;border-left-color:#77C457;
          border-bottom-color:#2C6218;border-right-color:#2C6218 }
-#emotes{
-  display:none;position:fixed;left:50%;bottom:78px;transform:translateX(-50%);
-  z-index:21;gap:8px;
-}
+#emotes{ display:none;gap:8px }
 #emotes.open{ display:flex }
 
 #chatbar{
@@ -175,7 +190,7 @@ canvas{display:block;image-rendering:pixelated}
   display:none;width:min(480px,92vw);
 }
 #chatbar input{
-  width:100%;padding:13px 14px;font:24px "VT323",monospace;
+  width:100%;padding:13px 14px;font:500 19px "Pixelify Sans",monospace;
   background:rgba(8,8,8,.92);color:#fff;
   border-top:3px solid #2C2C2C;border-left:3px solid #2C2C2C;
   border-bottom:3px solid #6E6E6E;border-right:3px solid #6E6E6E;
@@ -227,14 +242,14 @@ canvas{display:block;image-rendering:pixelated}
   <div class="box">
     <h1>Sunday <span>Park</span></h1>
     <p>Everyone who is online is in the same park. Walk in and say hello.</p>
-    <input id="name" maxlength="12" placeholder="Your name" autocomplete="off">
+    <input id="name" maxlength="12" placeholder="Your name" autocomplete="off" spellcheck="false" autocapitalize="off" autocorrect="off">
     <button id="enter">Walk in</button>
     <div class="err" id="gate-err"></div>
     <div class="tips">
-      <b>Move</b> with W A S D, arrows, or the stick on a phone.<br>
-      <b>Look around</b> by dragging anywhere.<br>
-      <b>Rides</b> start on their own, just walk onto the platform.<br>
-      <b>Balloons</b> at the stall pay the best tickets.
+      <div><b>Move</b> with W A S D, arrows, or the stick.</div>
+      <div><b>Look</b> around by dragging anywhere.</div>
+      <div><b>Rides</b> start when you step on the platform.</div>
+      <div><b>Balloons</b> at the stall pay the best tickets.</div>
     </div>
   </div>
 </div>
@@ -254,17 +269,19 @@ canvas{display:block;image-rendering:pixelated}
 <div id="stick"><div id="sbase"></div><div id="sknob"></div></div>
 
 <div id="buttons">
-  <div id="emotes">
+  <div class="row" id="emotes">
     <button class="btn" data-emote="wave">Wave</button>
     <button class="btn" data-emote="dance">Dance</button>
     <button class="btn" data-emote="cheer">Cheer</button>
     <button class="btn" data-emote="sit">Sit</button>
   </div>
-  <button class="btn" id="btn-emote">Emotes</button>
-  <button class="btn" id="btn-say">Say</button>
+  <div class="row">
+    <button class="btn" id="btn-emote">Emotes</button>
+    <button class="btn" id="btn-say">Say</button>
+  </div>
 </div>
 
-<div id="chatbar"><input id="chatinput" maxlength="60" placeholder="Type, then Enter"></div>
+<div id="chatbar"><input id="chatinput" maxlength="60" placeholder="Type, then Enter" spellcheck="false" autocapitalize="off" autocorrect="off"></div>
 
 <div id="gallery">
   <div class="sky" id="sky"></div>
@@ -1291,12 +1308,9 @@ stick.addEventListener('touchend', endStick);
 stick.addEventListener('touchcancel', endStick);
 
 /* emotes and chat */
-$('btn-emote').onclick = function(){
-  var e = $('emotes');
-  e.style.display = e.style.display === 'flex' ? 'none' : 'flex';
-};
+$('btn-emote').onclick = function(){ $('emotes').classList.toggle('open'); };
 document.querySelectorAll('[data-emote]').forEach(function(b){
-  b.onclick = function(){ sendEmote(b.dataset.emote); $('emotes').style.display = 'none'; };
+  b.onclick = function(){ sendEmote(b.dataset.emote); $('emotes').classList.remove('open'); };
 });
 $('btn-say').onclick = openSay;
 function openSay(){
