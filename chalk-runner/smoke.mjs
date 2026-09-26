@@ -34,6 +34,14 @@ await new Promise(r=>setTimeout(r,120));
 
 ctx.sheet('top');
 await new Promise(r=>setTimeout(r,120));
+/* two tabs on one laptop are two players; the seat must not leak between them */
+ctx.code = 'ABCD'; ctx.myKey = 'k1'; ctx.myName = 'Ann'; ctx.seatStore(true);
+ok('a seat is kept per tab, not per browser',
+   win.sessionStorage.getItem('cr.seat') !== null && win.localStorage.getItem('cr.seat') === null,
+   'session=' + win.sessionStorage.getItem('cr.seat') + ' local=' + win.localStorage.getItem('cr.seat'));
+ctx.forgetSeat();
+ok('and it can be let go', ctx.seatStore() === null);
+
 ok('the record list loads into its sheet', /312/.test(E('top-list').innerHTML), E('top-list').innerHTML.slice(0,80));
 ok('the sheet opens', !E('sheet').classList.contains('hidden'));
 ok("today's board is separate", /Eve/.test(E('day-list').innerHTML) && !/Eve/.test(E('top-list').innerHTML),

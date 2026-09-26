@@ -603,16 +603,21 @@ function connect(rc, name, create, solo){
    ========================================================================== */
 var retryAt = 0, retries = 0, retryTimer = null;
 
+/* This has to be sessionStorage, not localStorage. Two tabs on one laptop are
+   two players, and they share localStorage: the second tab read the first
+   one's seat on load and walked straight into it, throwing the first player
+   out of their own game. sessionStorage belongs to the one tab, so a reload
+   comes back and a new tab is a new person, which is what both should be. */
 function seatStore(save){
   try {
-    if (save) localStorage.setItem('cr.seat', JSON.stringify({ c:code, k:myKey, n:myName, at:Date.now() }));
+    if (save) sessionStorage.setItem('cr.seat', JSON.stringify({ c:code, k:myKey, n:myName, at:Date.now() }));
     else {
-      var raw = localStorage.getItem('cr.seat');
+      var raw = sessionStorage.getItem('cr.seat');
       return raw ? JSON.parse(raw) : null;
     }
   } catch(_){ return null; }
 }
-function forgetSeat(){ try { localStorage.removeItem('cr.seat'); } catch(_){} }
+function forgetSeat(){ try { sessionStorage.removeItem('cr.seat'); } catch(_){} }
 
 function lostConnection(){
   if (!myKey || !code){ status('Disconnected. Reload to come back.'); return; }

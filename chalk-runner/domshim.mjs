@@ -47,6 +47,9 @@ export function makeWindow(){
     location:{ protocol:'https:', host:'chalk-runner.test', origin:'https://chalk-runner.test',
                pathname:'/', search:'' },
     navigator:{ vibrate:()=>true, clipboard:{ writeText:async()=>{} } },
+    sessionStorage:(function(){ const m=new Map(); return {
+      getItem:k=>m.has(k)?m.get(k):null, setItem:(k,v)=>m.set(k,String(v)),
+      removeItem:k=>m.delete(k) }; })(),
     localStorage:(function(){ const m=new Map(); return {
       getItem:k=>m.has(k)?m.get(k):null, setItem:(k,v)=>m.set(k,String(v)),
       removeItem:k=>m.delete(k) }; })(),
