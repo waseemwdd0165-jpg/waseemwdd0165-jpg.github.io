@@ -1,0 +1,594 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<title>Pitch Black</title>
+<meta name="description" content="A multiplayer stealth game played in the dark. Your torch is how you see and how you get found. One hunter, everyone else runs for the exit.">
+
+<meta property="og:type" content="website">
+<meta property="og:title" content="Pitch Black">
+<meta property="og:description" content="A multiplayer stealth game played in the dark. Every player sees only what their own torch lights. One hunter, everyone else runs for the exit.">
+
+<style>
+:root{
+  --ground:#05060A; --panel:rgba(255,255,255,.04); --line:rgba(255,255,255,.10);
+  --ink:#F2F4F9; --muted:#98A1B6; --dim:#666F86; --accent:#5B7CFF;
+  --hunter:#FF5B5B; --runner:#3ECF8E; --radius:14px;
+}
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+html,body{height:100%;overflow:hidden}
+body{
+  background:var(--ground);color:var(--ink);
+  font:16px/1.5 "IBM Plex Sans",-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;
+  -webkit-font-smoothing:antialiased;
+}
+.menu{position:absolute;inset:0;overflow-y:auto;padding:24px 16px 48px;display:flex;justify-content:center}
+.menu::before{content:"";position:fixed;inset:0;z-index:-1;pointer-events:none;
+  background:radial-gradient(700px 480px at 50% 0%, rgba(91,124,255,.14), transparent 70%)}
+.wrap{width:100%;max-width:560px}
+
+.eyebrow{font:500 11px/1 "IBM Plex Mono",ui-monospace,monospace;letter-spacing:.18em;
+  text-transform:uppercase;color:var(--accent);margin-bottom:10px}
+h1{font-size:clamp(30px,8vw,44px);line-height:1.05;letter-spacing:-.025em;font-weight:800;margin-bottom:10px}
+.tagline{color:var(--muted);font-size:15px}
+
+.card{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);padding:20px;margin-top:16px}
+.card h2{font-size:16px;font-weight:600;margin-bottom:5px}
+.card .sub{color:var(--muted);font-size:13.5px;margin-bottom:14px}
+
+label{display:block;font-size:12px;color:var(--muted);margin-bottom:6px}
+input[type=text]{width:100%;padding:12px 14px;border-radius:10px;background:rgba(0,0,0,.35);
+  border:1px solid var(--line);color:var(--ink);font-size:16px;font-family:inherit}
+input[type=text]:focus{outline:none;border-color:var(--accent)}
+input.code{font:700 22px/1 "IBM Plex Mono",ui-monospace,monospace;letter-spacing:.24em;
+  text-transform:uppercase;text-align:center}
+
+button{font:600 15px/1 inherit;cursor:pointer;border:0;border-radius:10px;padding:13px 18px;
+  background:var(--accent);color:#fff;width:100%}
+button:hover{opacity:.9}
+button:disabled{opacity:.45;cursor:not-allowed}
+button.ghost{background:transparent;border:1px solid var(--line);color:var(--ink)}
+.row{margin-top:14px}
+
+.roomcode{font:800 40px/1 "IBM Plex Mono",ui-monospace,monospace;letter-spacing:.2em;
+  text-align:center;color:var(--accent);padding:16px 0 8px}
+.copyhint{text-align:center;color:var(--dim);font-size:12.5px}
+ul.players{list-style:none;margin-top:14px}
+ul.players li{display:flex;justify-content:space-between;padding:10px 0;
+  border-top:1px solid var(--line);font-size:14.5px}
+ul.players li:first-child{border-top:0}
+.badge{font:500 10.5px/1 "IBM Plex Mono",ui-monospace,monospace;letter-spacing:.1em;
+  text-transform:uppercase;color:var(--accent);background:rgba(91,124,255,.14);padding:5px 8px;border-radius:5px}
+
+.rules{list-style:none;font-size:14px;color:var(--muted)}
+.rules li{padding:7px 0 7px 20px;position:relative}
+.rules li::before{content:"-";position:absolute;left:4px;color:var(--accent)}
+
+.err{color:var(--hunter);font-size:13.5px;margin-top:10px}
+.status{font:500 11.5px/1 "IBM Plex Mono",ui-monospace,monospace;letter-spacing:.1em;
+  text-transform:uppercase;color:var(--dim);text-align:center;margin-top:16px}
+.hidden{display:none!important}
+
+#stage{position:fixed;inset:0;background:#000}
+canvas{position:absolute;inset:0;width:100%;height:100%;display:block;touch-action:none}
+#hud{position:absolute;top:0;left:0;right:0;padding:14px 16px;display:flex;
+  justify-content:space-between;align-items:flex-start;pointer-events:none;
+  font:600 13px/1.3 "IBM Plex Mono",ui-monospace,monospace;letter-spacing:.08em;text-transform:uppercase}
+#hud .role{padding:7px 11px;border-radius:7px;background:rgba(0,0,0,.6);border:1px solid var(--line)}
+#hud .role.hunter{color:var(--hunter);border-color:rgba(255,91,91,.45)}
+#hud .role.runner{color:var(--runner);border-color:rgba(62,207,142,.45)}
+#hud .right{text-align:right;color:var(--muted);background:rgba(0,0,0,.6);
+  border:1px solid var(--line);padding:7px 11px;border-radius:7px}
+#toast{position:absolute;left:50%;top:38%;transform:translate(-50%,-50%);text-align:center;
+  pointer-events:none;width:86%;max-width:440px}
+#toast .big{font-size:clamp(24px,7vw,38px);font-weight:800;letter-spacing:-.02em;line-height:1.1}
+#toast .small{color:var(--muted);font-size:14px;margin-top:8px}
+#stick{position:absolute;left:0;bottom:0;width:50%;height:55%;touch-action:none}
+#stickbase,#stickknob{position:absolute;border-radius:50%;pointer-events:none;opacity:0;transition:opacity .15s}
+#stickbase{width:116px;height:116px;border:2px solid rgba(255,255,255,.18);margin:-58px 0 0 -58px}
+#stickknob{width:52px;height:52px;background:rgba(255,255,255,.22);margin:-26px 0 0 -26px}
+#stick.on #stickbase,#stick.on #stickknob{opacity:1}
+</style>
+</head>
+<body>
+
+<div class="menu" id="menu">
+<div class="wrap">
+  <div class="eyebrow">Multiplayer Stealth</div>
+  <h1>Pitch Black</h1>
+  <p class="tagline">One hunter. Everyone else is looking for the way out.
+  Your torch is the only thing that lets you see, and the only thing that gives you away.</p>
+
+  <section id="s-landing">
+    <div class="card">
+      <h2>Start a game</h2>
+      <p class="sub">You host. Share the code, others join from any phone or laptop,
+      on any network.</p>
+      <label for="host-name">Your name</label>
+      <input type="text" id="host-name" maxlength="12" placeholder="Your name" autocomplete="off">
+      <div class="row"><button id="btn-create">Create room</button></div>
+    </div>
+
+    <div class="card">
+      <h2>Join a game</h2>
+      <p class="sub">Four letters from whoever is hosting.</p>
+      <label for="join-name">Your name</label>
+      <input type="text" id="join-name" maxlength="12" placeholder="Your name" autocomplete="off">
+      <label for="join-code" style="margin-top:12px">Room code</label>
+      <input type="text" id="join-code" class="code" maxlength="4" placeholder="ABCD" autocomplete="off">
+      <div class="row"><button class="ghost" id="btn-join">Join room</button></div>
+      <div class="err hidden" id="join-err"></div>
+    </div>
+
+    <div class="card">
+      <h2>How it works</h2>
+      <ul class="rules">
+        <li>The map is dark. You see only what your torch lights, plus a pace or two around your feet.</li>
+        <li>Your torch points where you are moving, so you cannot look one way and walk another.</li>
+        <li>One player starts as the hunter. Everyone else is a runner.</li>
+        <li>Runners win by reaching the green exit. A faint marker at the screen edge points the way.</li>
+        <li>A caught runner joins the hunt, so the odds shift every time somebody falls.</li>
+        <li>Three rounds. Escaping scores 100, catching scores 50.</li>
+        <li>The server holds the map, not your browser. You are never sent the position of
+        somebody your torch cannot reach, so there is nothing to find in the console.</li>
+      </ul>
+    </div>
+  </section>
+
+  <section id="s-lobby" class="hidden">
+    <div class="card">
+      <h2>Room code</h2>
+      <div class="roomcode" id="lobby-code">----</div>
+      <p class="copyhint" id="copy-hint">Tap the code to copy the join link</p>
+      <ul class="players" id="lobby-players"></ul>
+      <div class="row" id="host-controls"><button id="btn-start" disabled>Start game</button></div>
+      <div class="status hidden" id="lobby-wait">Waiting for the host to start</div>
+    </div>
+  </section>
+
+  <section id="s-final" class="hidden">
+    <div class="card">
+      <h2>Final scores</h2>
+      <p class="sub" id="final-sub"></p>
+      <ul class="players" id="final-list"></ul>
+      <div class="row" id="final-controls"><button id="btn-again">Play again</button></div>
+      <div class="status hidden" id="final-wait">Waiting for the host</div>
+    </div>
+  </section>
+
+  <div class="status" id="conn-status"></div>
+</div>
+</div>
+
+<div id="stage" class="hidden">
+  <canvas id="cv"></canvas>
+  <div id="hud">
+    <div class="role" id="hud-role">Runner</div>
+    <div class="right" id="hud-right"></div>
+  </div>
+  <div id="toast" class="hidden"><div class="big" id="toast-big"></div><div class="small" id="toast-small"></div></div>
+  <div id="stick"><div id="stickbase"></div><div id="stickknob"></div></div>
+</div>
+
+<script type="module">
+/* ==========================================================================
+   Pitch Black - the browser half
+
+   There is no game in here. The server runs the only simulation and sends
+   each player a slice of it; this file draws that slice and forwards the
+   stick. The one thing it does predict is your own movement, because waiting
+   for a round trip before you appear to move feels broken on a phone.
+   ========================================================================== */
+
+import {
+  MAP, MW, MH, cell, solid, EXIT, AMBIENT, TICK,
+  speedOf, rangeOf, fovOf, moveWithWalls, castRay, canSee, roomCode
+} from './game.js';
+
+const $ = (id) => document.getElementById(id);
+const esc = (s) => String(s).replace(/[&<>"']/g,
+  c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+
+function showMenu(id){
+  ['s-landing','s-lobby','s-final'].forEach(s => $(s).classList.add('hidden'));
+  if (id) $(id).classList.remove('hidden');
+  $('menu').classList.remove('hidden');
+  $('stage').classList.add('hidden');
+}
+function showStage(){
+  $('menu').classList.add('hidden');
+  $('stage').classList.remove('hidden');
+  resize();
+}
+const status = (m) => { $('conn-status').textContent = m || ''; };
+function joinFailed(msg){
+  $('join-err').textContent = msg;
+  $('join-err').classList.remove('hidden');
+  try { $('join-err').scrollIntoView({ block:'center' }); } catch(_){}
+  status('');
+}
+function busy(btn, label){ btn.disabled = true; btn.textContent = label; }
+function free(btn, label){ btn.disabled = false; btn.textContent = label; }
+
+/* ---------- state -------------------------------------------------------- */
+let ws = null, myId = null, isHost = false, myName = '', code = '';
+let view = null;            /* last slice from the server */
+let local = null;           /* my predicted position */
+let input = { ax: 0, ay: 0 };
+let creating = false, attempts = 0;
+
+/* ---------- connection ---------------------------------------------------- */
+function socketUrl(rc){
+  const proto = location.protocol === 'https:' ? 'wss:' : 'ws:';
+  return proto + '//' + location.host + '/api/ws?room=' + rc;
+}
+
+function connect(rc, name, create){
+  code = rc; myName = name;
+  let settled = false;
+  const label = create ? $('btn-create') : $('btn-join');
+  busy(label, create ? 'Opening room...' : 'Connecting to ' + rc + '...');
+  status(create ? 'Opening room ' + rc + '...' : 'Connecting to ' + rc + '...');
+
+  const giveUp = setTimeout(() => {
+    if (settled) return;
+    try { ws && ws.close(); } catch(_){}
+    free(label, create ? 'Create room' : 'Join room');
+    joinFailed('No answer from the server after fifteen seconds. Check you are ' +
+               'online. If you are, the game server may be down.');
+  }, 15000);
+
+  ws = new WebSocket(socketUrl(rc));
+
+  ws.onopen = () => {
+    settled = true;
+    clearTimeout(giveUp);
+    ws.send(JSON.stringify({ t: 'join', name, create: !!create }));
+  };
+
+  ws.onmessage = (e) => {
+    let m; try { m = JSON.parse(e.data); } catch { return; }
+    onServer(m, label, create);
+  };
+
+  ws.onerror = () => {
+    if (settled) return;
+    settled = true;
+    clearTimeout(giveUp);
+    free(label, create ? 'Create room' : 'Join room');
+    joinFailed('Could not reach the game server. Check your connection.');
+  };
+
+  ws.onclose = () => {
+    if (!settled) return;
+    status('Disconnected.');
+  };
+}
+
+function onServer(m, label, create){
+  if (m.t === 'taken'){
+    /* our four letters already belong to a live room, pick another */
+    try { ws.close(); } catch(_){}
+    if (++attempts < 8) connect(roomCode(), myName, true);
+    else { free(label, 'Create room'); joinFailed('Could not find a free room code.'); }
+    return;
+  }
+  if (m.t === 'closed'){
+    free($('btn-join'), 'Join room');
+    joinFailed('That game has already started. Wait for the match to finish.');
+    showMenu('s-landing');
+    return;
+  }
+  if (m.t === 'full'){
+    free($('btn-join'), 'Join room');
+    joinFailed('That room is full. Eight players is the limit.');
+    showMenu('s-landing');
+    return;
+  }
+  if (m.t === 'you'){
+    myId = m.id;
+    free($('btn-create'), 'Create room');
+    free($('btn-join'), 'Join room');
+    status(create ? 'Room open. Code ' + code : 'Connected to ' + code);
+    if (!inputTimer) inputTimer = setInterval(sendInput, TICK);
+    return;
+  }
+  if (m.t !== 'state') return;
+
+  const wasRound = view ? view.round : -1;
+  view = m;
+  isHost = !!m.host;
+  if (m.round !== wasRound) local = null;
+
+  if (m.ph === 'lobby'){ renderLobby(); showMenu('s-lobby'); }
+  else if (m.ph === 'play' || m.ph === 'result'){ showStage(); }
+  else if (m.ph === 'over'){ renderFinal(); showMenu('s-final'); }
+}
+
+let inputTimer = null;
+function sendInput(){
+  if (!ws || ws.readyState !== 1) return;
+  ws.send(JSON.stringify({ t: 'in', ax: input.ax, ay: input.ay }));
+}
+function sendSimple(t){
+  if (ws && ws.readyState === 1) ws.send(JSON.stringify({ t }));
+}
+
+/* ---------- menus --------------------------------------------------------- */
+function renderLobby(){
+  const r = view ? view.roster : [];
+  $('lobby-code').textContent = code || '----';
+  $('lobby-players').innerHTML = r.map((p, i) =>
+    '<li><span>' + esc(p.n) + '</span>' +
+    (i === 0 ? '<span class="badge">host</span>'
+             : '<span style="color:var(--dim);font-size:13px">ready</span>') + '</li>').join('');
+  if (isHost){
+    $('host-controls').classList.remove('hidden');
+    $('lobby-wait').classList.add('hidden');
+    $('btn-start').disabled = r.length < 2;
+    $('btn-start').textContent = r.length < 2
+      ? 'Waiting for one more player' : 'Start game (' + r.length + ' players)';
+  } else {
+    $('host-controls').classList.add('hidden');
+    $('lobby-wait').classList.remove('hidden');
+  }
+}
+
+function renderFinal(){
+  const r = (view ? view.roster : []).slice().sort((a, b) => b.s - a.s);
+  $('final-sub').textContent = r.length ? r[0].n + ' finished on ' + r[0].s + '.' : '';
+  $('final-list').innerHTML = r.map((p, i) =>
+    '<li><span>' + (i + 1) + '. ' + esc(p.n) + '</span><span>' + p.s + '</span></li>').join('');
+  $('final-controls').classList.toggle('hidden', !isHost);
+  $('final-wait').classList.toggle('hidden', isHost);
+}
+
+/* ---------- arena --------------------------------------------------------- */
+const cv = $('cv'), ctx = cv.getContext('2d');
+let VW = 0, VH = 0, DPR = 1;
+function resize(){
+  DPR = Math.min(2, window.devicePixelRatio || 1);
+  VW = cv.clientWidth; VH = cv.clientHeight;
+  cv.width = Math.round(VW * DPR); cv.height = Math.round(VH * DPR);
+  ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
+}
+window.addEventListener('resize', resize);
+
+function draw(){
+  if (!view || (view.ph !== 'play' && view.ph !== 'result') || !view.me) return;
+  const self = view.me;
+
+  if (!local) local = { x: self.x, y: self.y, dir: self.d };
+  /* predict my own movement so the stick feels immediate, then ease back
+     toward whatever the server says is true */
+  const mag = Math.hypot(input.ax, input.ay);
+  if (mag > 0.08 && !self.e){
+    const ax = input.ax / Math.max(1, mag), ay = input.ay / Math.max(1, mag);
+    local.dir = Math.atan2(ay, ax);
+    moveWithWalls(local, ax * speedOf(self.r) / 60, ay * speedOf(self.r) / 60);
+  }
+  local.x += (self.x - local.x) * 0.22;
+  local.y += (self.y - local.y) * 0.22;
+
+  const eye = { x: local.x, y: local.y };
+  const ang = local.dir;
+  const isHunter = self.r === 'hunter';
+  const range = rangeOf(self.r), fov = fovOf(self.r);
+
+  const S = Math.min(VW, VH) / (range * 1.9);
+  const cxp = VW / 2, cyp = VH / 2;
+  const px = (wx) => cxp + (wx - eye.x) * S;
+  const py = (wy) => cyp + (wy - eye.y) * S;
+
+  ctx.clearRect(0, 0, VW, VH);
+  ctx.fillStyle = '#000';
+  ctx.fillRect(0, 0, VW, VH);
+
+  ctx.save();
+  ctx.beginPath();
+  const steps = 90, a0 = ang - fov / 2, st = fov / steps;
+  ctx.moveTo(px(eye.x), py(eye.y));
+  for (let i = 0; i <= steps; i++){
+    const a = a0 + st * i;
+    const d = castRay(eye.x, eye.y, a, range);
+    ctx.lineTo(px(eye.x + Math.cos(a) * d), py(eye.y + Math.sin(a) * d));
+  }
+  ctx.closePath();
+  ctx.moveTo(px(eye.x + AMBIENT), py(eye.y));
+  ctx.arc(px(eye.x), py(eye.y), AMBIENT * S, 0, Math.PI * 2);
+  ctx.clip();
+
+  drawWorld(px, py, S, eye, range);
+
+  const warm = ctx.createRadialGradient(cxp, cyp, 0, cxp, cyp, range * S);
+  warm.addColorStop(0,    'rgba(255,206,150,0.26)');
+  warm.addColorStop(0.45, 'rgba(255,176,110,0.12)');
+  warm.addColorStop(1,    'rgba(255,150,80,0)');
+  ctx.globalCompositeOperation = 'lighter';
+  ctx.fillStyle = warm;
+  ctx.fillRect(0, 0, VW, VH);
+  ctx.globalCompositeOperation = 'source-over';
+  ctx.restore();
+
+  const g = ctx.createRadialGradient(cxp, cyp, AMBIENT * S * 0.7, cxp, cyp, range * S);
+  g.addColorStop(0,    'rgba(0,0,0,0)');
+  g.addColorStop(0.55, 'rgba(0,0,0,0.20)');
+  g.addColorStop(0.85, 'rgba(0,0,0,0.62)');
+  g.addColorStop(1,    'rgba(0,0,0,0.94)');
+  ctx.fillStyle = g;
+  ctx.fillRect(0, 0, VW, VH);
+
+  /* Everyone in `see` was already judged visible by the server, so there is
+     no second filter here. The check below is only to stop somebody popping
+     in a frame early while my predicted position drifts. */
+  for (const o of (view.see || [])){
+    if (!canSee(eye, ang, range, fov, o.x, o.y)) continue;
+    dot(px(o.x), py(o.y), S * 0.28, o.r === 'hunter' ? '#FF5B5B' : '#3ECF8E');
+    ctx.font = '600 11px "IBM Plex Mono", ui-monospace, monospace';
+    ctx.fillStyle = 'rgba(255,255,255,.75)';
+    ctx.textAlign = 'center';
+    ctx.fillText(o.n, px(o.x), py(o.y) - S * 0.45);
+  }
+
+  dot(cxp, cyp, S * 0.28, isHunter ? '#FF5B5B' : '#FFFFFF');
+  if (!isHunter && !self.e) exitHint(eye, cxp, cyp);
+  drawHud(self);
+}
+
+function dot(x, y, r, col){
+  ctx.beginPath(); ctx.arc(x, y, r, 0, Math.PI * 2);
+  ctx.fillStyle = col; ctx.fill();
+  ctx.lineWidth = 2; ctx.strokeStyle = 'rgba(0,0,0,.55)'; ctx.stroke();
+}
+
+function drawWorld(px, py, S, eye, range){
+  const x0 = Math.max(0, Math.floor(eye.x - range - 1)), x1 = Math.min(MW - 1, Math.ceil(eye.x + range + 1));
+  const y0 = Math.max(0, Math.floor(eye.y - range - 1)), y1 = Math.min(MH - 1, Math.ceil(eye.y + range + 1));
+  for (let y = y0; y <= y1; y++){
+    for (let x = x0; x <= x1; x++){
+      const c = cell(x, y), X = px(x), Y = py(y);
+      if (c === '#'){
+        ctx.fillStyle = '#5A6183'; ctx.fillRect(X, Y, S + 1, S + 1);
+        ctx.fillStyle = 'rgba(255,255,255,.14)'; ctx.fillRect(X, Y, S + 1, Math.max(2, S * 0.09));
+        ctx.fillStyle = 'rgba(0,0,0,.22)'; ctx.fillRect(X, Y + S * 0.82, S + 1, S * 0.2);
+      } else {
+        ctx.fillStyle = '#242A3C'; ctx.fillRect(X, Y, S + 1, S + 1);
+        ctx.strokeStyle = 'rgba(255,255,255,.055)'; ctx.lineWidth = 1;
+        ctx.strokeRect(X + 0.5, Y + 0.5, S, S);
+      }
+      if (c === 'E'){
+        const p = 0.55 + 0.45 * Math.sin(Date.now() / 320);
+        ctx.fillStyle = 'rgba(62,207,142,' + (0.3 + 0.35 * p) + ')';
+        ctx.fillRect(X, Y, S + 1, S + 1);
+        ctx.strokeStyle = '#3ECF8E'; ctx.lineWidth = 2;
+        ctx.strokeRect(X + 2, Y + 2, S - 3, S - 3);
+      }
+    }
+  }
+}
+
+function exitHint(eye, cxp, cyp){
+  const a = Math.atan2(EXIT.y - eye.y, EXIT.x - eye.x);
+  const r = Math.min(VW, VH) * 0.42;
+  ctx.save();
+  ctx.translate(cxp + Math.cos(a) * r, cyp + Math.sin(a) * r);
+  ctx.rotate(a);
+  ctx.beginPath(); ctx.moveTo(9, 0); ctx.lineTo(-6, 6); ctx.lineTo(-6, -6); ctx.closePath();
+  ctx.fillStyle = 'rgba(62,207,142,.4)'; ctx.fill();
+  ctx.restore();
+}
+
+function drawHud(self){
+  const r = $('hud-role');
+  if (self.e){ r.textContent = 'Out. You made it'; r.className = 'role runner'; }
+  else if (self.r === 'hunter'){ r.textContent = 'Hunter'; r.className = 'role hunter'; }
+  else { r.textContent = 'Runner'; r.className = 'role runner'; }
+
+  $('hud-right').textContent = 'Round ' + (view.round + 1) + ' of ' + view.rounds +
+    '   ' + Math.ceil(view.left / 1000) + 's   ' + self.s + ' pts';
+
+  if (view.ph === 'result' && view.big){
+    $('toast-big').textContent = view.big;
+    $('toast-small').textContent = view.small;
+    $('toast').classList.remove('hidden');
+  } else {
+    $('toast').classList.add('hidden');
+  }
+}
+
+function frame(){ try { draw(); } catch(e){} requestAnimationFrame(frame); }
+requestAnimationFrame(frame);
+
+/* ---------- input --------------------------------------------------------- */
+const keys = {};
+window.addEventListener('keydown', (e) => {
+  keys[e.key.toLowerCase()] = true;
+  if (['arrowup','arrowdown','arrowleft','arrowright',' '].includes(e.key.toLowerCase())) e.preventDefault();
+  readKeys();
+});
+window.addEventListener('keyup', (e) => { keys[e.key.toLowerCase()] = false; readKeys(); });
+function readKeys(){
+  let ax = 0, ay = 0;
+  if (keys['a'] || keys['arrowleft'])  ax -= 1;
+  if (keys['d'] || keys['arrowright']) ax += 1;
+  if (keys['w'] || keys['arrowup'])    ay -= 1;
+  if (keys['s'] || keys['arrowdown'])  ay += 1;
+  setInput(ax, ay);
+}
+
+const stick = $('stick'), knob = $('stickknob'), base = $('stickbase');
+let stickId = null, sx0 = 0, sy0 = 0;
+const STICK_R = 52;
+stick.addEventListener('touchstart', (e) => {
+  const t = e.changedTouches[0];
+  stickId = t.identifier; sx0 = t.clientX; sy0 = t.clientY;
+  const rect = stick.getBoundingClientRect();
+  base.style.left = knob.style.left = (sx0 - rect.left) + 'px';
+  base.style.top  = knob.style.top  = (sy0 - rect.top) + 'px';
+  stick.classList.add('on');
+  e.preventDefault();
+}, { passive:false });
+stick.addEventListener('touchmove', (e) => {
+  for (const t of e.changedTouches){
+    if (t.identifier !== stickId) continue;
+    const dx = t.clientX - sx0, dy = t.clientY - sy0;
+    const d = Math.hypot(dx, dy);
+    const k = d > STICK_R ? STICK_R / d : 1;
+    const rect = stick.getBoundingClientRect();
+    knob.style.left = (sx0 - rect.left + dx * k) + 'px';
+    knob.style.top  = (sy0 - rect.top  + dy * k) + 'px';
+    setInput(dx / STICK_R, dy / STICK_R);
+  }
+  e.preventDefault();
+}, { passive:false });
+function endStick(e){
+  for (const t of e.changedTouches){
+    if (t.identifier === stickId){ stickId = null; stick.classList.remove('on'); setInput(0, 0); }
+  }
+}
+stick.addEventListener('touchend', endStick);
+stick.addEventListener('touchcancel', endStick);
+
+function setInput(ax, ay){
+  const m = Math.hypot(ax, ay);
+  if (m > 1){ ax /= m; ay /= m; }
+  input.ax = ax; input.ay = ay;
+}
+
+/* ---------- wiring -------------------------------------------------------- */
+$('btn-create').onclick = () => {
+  $('join-err').classList.add('hidden');
+  attempts = 0;
+  connect(roomCode(), ($('host-name').value || 'Host').trim().slice(0,12) || 'Host', true);
+};
+$('btn-join').onclick = () => {
+  const rc = ($('join-code').value || '').trim().toUpperCase();
+  if (rc.length !== 4){ joinFailed('The room code is four letters.'); return; }
+  $('join-err').classList.add('hidden');
+  connect(rc, ($('join-name').value || 'Player').trim().slice(0,12) || 'Player', false);
+};
+$('btn-start').onclick = () => sendSimple('start');
+$('btn-again').onclick = () => sendSimple('again');
+
+$('join-code').addEventListener('input', function(){
+  this.value = this.value.toUpperCase().replace(/[^A-Z]/g, '');
+});
+$('join-code').addEventListener('keydown', (e) => { if (e.key === 'Enter') $('btn-join').click(); });
+
+$('lobby-code').addEventListener('click', function(){
+  if (!code || !navigator.clipboard) return;
+  navigator.clipboard.writeText(location.origin + location.pathname + '?room=' + code)
+    .then(() => {
+      $('copy-hint').textContent = 'Join link copied';
+      setTimeout(() => { $('copy-hint').textContent = 'Tap the code to copy the join link'; }, 1800);
+    }).catch(() => {});
+});
+
+const pre = location.search.match(/room=([A-Za-z]{4})/);
+if (pre){ $('join-code').value = pre[1].toUpperCase(); $('join-name').focus(); }
+
+resize();
+</script>
+</body>
+</html>
