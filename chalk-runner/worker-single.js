@@ -64,21 +64,42 @@ body{
   font-family:"Caveat",cursive;font-size:clamp(18px,5vw,25px);
   color:var(--warn);line-height:1;margin-top:1px;
 }
-.say{color:var(--soft);font-size:13.5px;line-height:1.45;text-align:center;
-     margin:10px 0 2px;flex:0 0 auto}
-.say b{color:var(--chalk);font-weight:600}
+/* what a match actually is, before anybody commits to one */
+.facts{
+  display:flex;justify-content:center;align-items:center;gap:9px;margin-top:9px;
+  color:var(--dim);font-size:11px;letter-spacing:.1em;text-transform:uppercase;
+}
+.facts i{width:3px;height:3px;border-radius:50%;background:var(--line);display:block}
+
+/* the three steps, in plain sight rather than behind a link */
+.steps{
+  list-style:none;counter-reset:s;margin:11px 0 2px;flex:0 0 auto;
+  color:var(--soft);font-size:13px;line-height:1.4;
+}
+.steps li{
+  counter-increment:s;position:relative;padding:3px 0 3px 26px;
+}
+.steps li:before{
+  content:counter(s);position:absolute;left:0;top:3px;
+  width:18px;height:18px;border-radius:50%;
+  border:1px solid var(--line);color:var(--dim);
+  font-size:10.5px;line-height:17px;text-align:center;
+}
+.steps b{color:var(--chalk);font-weight:600}
 
 /* the little looping demo, so you see the game before you read about it */
 #demo{
   position:static;display:block;
-  width:100%;flex:0 1 120px;min-height:0;margin:12px 0 2px;border-radius:14px;
+  width:100%;flex:0 1 112px;min-height:0;margin:11px 0 2px;border-radius:14px;
   border:1px solid var(--line);background:rgba(0,0,0,.16);
 }
-@media (max-height:600px){ #demo{display:none} .say{display:none} }
+@media (max-height:680px){ #demo{flex:0 1 84px} }
+@media (max-height:600px){ #demo{display:none} }
+@media (max-height:540px){ .steps{display:none} .facts{margin-top:5px} }
 /* the demo and the pitch are for somebody who has not played yet. In the
    lobby and on the end screen they were pushing the real content into a
    scrollbar, so they get out of the way. */
-#gate.busy #demo, #gate.busy .say{ display:none }
+#gate.busy #demo, #gate.busy .steps, #gate.busy .facts{ display:none }
 #gate.busy .brand h1{ font-size:clamp(34px,9vw,48px) }
 #gate.busy .brand .tag{ font-size:clamp(15px,4vw,19px) }
 
@@ -284,10 +305,16 @@ ul.list li:first-child{border-top:0}
     <div class="brand">
       <h1 class="hand">Chalk Runner</h1>
       <div class="tag hand">One step ahead</div>
+      <div class="facts">
+        <span>2 players</span><i></i><span>4 rounds</span><i></i><span>2 to 5 minutes</span>
+      </div>
     </div>
     <canvas id="demo"></canvas>
-    <p class="say">One of you <b>draws</b>. The other <b>runs</b> on it.
-    The runner never stops, and there is no ground until somebody makes some.</p>
+    <ol class="steps">
+      <li><b>Drag to lay chalk.</b> It becomes real ground.</li>
+      <li><b>The other one runs on it</b> and never stops.</li>
+      <li><b>Roles swap each round.</b> The score is metres.</li>
+    </ol>
 
     <div class="panel">
       <section id="s-landing">
