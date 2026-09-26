@@ -760,6 +760,7 @@ function sendEmote(kind){ if (ws && ws.readyState === 1) ws.send(JSON.stringify(
 function sendSay(text){ if (ws && ws.readyState === 1) ws.send(JSON.stringify({ t:'say', text: text })); }
 
 function onWorld(m){
+  if (m.a){ rideAngle = m.a; rideAt = performance.now(); }
   var live = {};
   for (var i = 0; i < m.p.length; i++){
     var p = m.p[i];
@@ -845,15 +846,28 @@ function frame(){
     poseFor(o.mesh, o.data, dt);
   }
 
-  /* the rides turn whether or not anyone is on them */
-  var tSec = performance.now() / 1000;
-  if (wheelGroup)    wheelGroup.rotation.z = -tSec * 0.21;
-  if (carouselGroup) carouselGroup.rotation.y = tSec * 1.05;
-  if (swingGroup)    swingGroup.rotation.y = tSec * 0.78;
+  /* The rides are turned to the angle the server last reported, advanced by
+     the time since it arrived. Guessing locally is what made riders float
+     beside the cabins instead of sitting in them. */
+  spinRides();
 
   updateCamera();
   updatePrompt();
   renderer.render(scene, camera);
+}
+
+/* one turn every this many seconds, matching the server exactly */
+var PERIOD = { F: 30, C: 9, S: 11 };
+var rideAngle = { F: 0, C: 0, S: 0 }, rideAt = 0;
+
+function spinRides(){
+  var since = (performance.now() - rideAt) / 1000;
+  var f = rideAngle.F - since * (Math.PI*2 / PERIOD.F);
+  var c = rideAngle.C + since * (Math.PI*2 / PERIOD.C);
+  var s = rideAngle.S + since * (Math.PI*2 / PERIOD.S);
+  if (wheelGroup)    wheelGroup.rotation.z = f;
+  if (carouselGroup) carouselGroup.rotation.y = c;
+  if (swingGroup)    swingGroup.rotation.y = s;
 }
 
 function poseFor(mesh, p, dt){

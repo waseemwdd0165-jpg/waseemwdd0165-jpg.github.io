@@ -73,12 +73,63 @@ export function solid(x, y){ return SOLID.indexOf(cell(x, y)) >= 0; }
    you over the treetops; the others turn flat. The maze does not turn at
    all, it just loses you somewhere else in the park.
    ------------------------------------------------------------------------ */
+/* Each ride turns for ever at its own steady rate. The server publishes the
+   angle with every update and the browser rotates the model to match, so a
+   rider and the seat they are sitting in can never drift apart. Getting this
+   wrong once meant people floated through the wheel beside the cabins. */
 export const RIDES = {
-  F: { name: 'The Big Wheel', cx: 17.5, cz: 16.5, r: 5.4, secs: 30, spins: 1,   plane: 'vertical', hub: 6.2 },
-  C: { name: 'Carousel',      cx: 42.0, cz: 16.5, r: 2.4, secs: 18, spins: 3,   plane: 'flat',     bob: 0.45 },
-  S: { name: 'Swing Ride',    cx: 42.0, cz: 29.0, r: 4.0, secs: 20, spins: 2.5, plane: 'flat',     high: 3.4 },
-  M: { name: 'Mirror Maze',   cx: 17.5, cz: 29.0, r: 0,   secs: 6,  spins: 0,   plane: 'lost' }
+  F: { name: 'The Big Wheel', cx: 17.5, cz: 16.5, r: 5.4, hub: 6.2,
+       plane: 'vertical', seats: 10, period: 30, revs: 1 },
+  C: { name: 'Carousel',      cx: 42.0, cz: 16.5, r: 2.4, high: 1.2,
+       plane: 'flat',     seats: 8,  period: 9,  revs: 3 },
+  S: { name: 'Swing Ride',    cx: 42.0, cz: 29.0, r: 4.0, high: 3.4,
+       plane: 'flat',     seats: 8,  period: 11, revs: 2 },
+  M: { name: 'Mirror Maze',   cx: 17.5, cz: 29.0, plane: 'lost', secs: 6 }
 };
+
+/* how far each ride has turned, right now */
+export function rideAngles(nowMs){
+  const t = (nowMs === undefined ? Date.now() : nowMs) / 1000;
+  return {
+    F: -t * (Math.PI * 2 / RIDES.F.period),   /* the wheel turns one way */
+    C:  t * (Math.PI * 2 / RIDES.C.period),
+    S:  t * (Math.PI * 2 / RIDES.S.period)
+  };
+}
+
+/* Where seat `seat` of a ride is, given how far the ride has turned. This is
+   the same arithmetic the browser uses to place the model, which is the
+   whole point. */
+export function seatPose(key, seat, rot){
+  const R = RIDES[key];
+  if (!R || R.plane === 'lost') return null;
+  const base = (seat / R.seats) * Math.PI * 2;
+  if (R.plane === 'vertical'){
+    const a = base + rot;
+    return { x: R.cx + Math.cos(a) * R.r, z: R.cz, h: R.hub + Math.sin(a) * R.r, dir: 0 };
+  }
+  const a = base - rot;
+  return { x: R.cx + Math.cos(a) * R.r, z: R.cz + Math.sin(a) * R.r,
+           h: R.high, dir: a + Math.PI / 2 };
+}
+
+/* the seat nearest the boarding point, so you get into the car in front of
+   you rather than teleporting across the ride */
+export function nearestSeat(key, rot, x, z){
+  const R = RIDES[key];
+  let best = 0, bestD = Infinity;
+  for (let s = 0; s < R.seats; s++){
+    const p = seatPose(key, s, rot);
+    const d = (p.x - x) * (p.x - x) + (p.z - z) * (p.z - z) + p.h * p.h * 0.35;
+    if (d < bestD){ bestD = d; best = s; }
+  }
+  return best;
+}
+
+export function rideSeconds(key){
+  const R = RIDES[key];
+  return R.plane === 'lost' ? R.secs : R.period * R.revs;
+}
 
 export const SPAWN = { x: 30.0, z: 38.2 };
 export const TICK_MS = 66;        /* about fifteen a second */
@@ -106,21 +157,6 @@ export function randomOpenTile(rnd){
     if (!solid(x, z) && 'FCSM'.indexOf(cell(x, z)) < 0) return { x: x + 0.5, z: z + 0.5 };
   }
   return { x: SPAWN.x, z: SPAWN.z };
-}
-
-/* Where a rider is, t running 0 to 1 through the ride. Exported so a test
-   can check nobody ends a ride underground or inside a wall. */
-export function ridePose(key, t){
-  const R = RIDES[key];
-  if (!R || R.plane === 'lost') return null;
-  const a = -Math.PI / 2 + t * Math.PI * 2 * R.spins;
-  if (R.plane === 'vertical'){
-    return { x: R.cx + Math.cos(a) * R.r, z: R.cz, h: R.hub + Math.sin(a) * R.r, dir: 0 };
-  }
-  const h = R.high !== undefined ? R.high
-          : R.bob !== undefined ? 0.6 + Math.sin(t * Math.PI * 2 * R.spins * 2) * R.bob
-          : 0;
-  return { x: R.cx + Math.cos(a) * R.r, z: R.cz + Math.sin(a) * R.r, h, dir: a + Math.PI / 2 };
 }
 
 /* ==========================================================================
@@ -247,17 +283,20 @@ export class Park {
   maybeBoard(p, now){
     const c = cell(Math.floor(p.x), Math.floor(p.z));
     if (!RIDES[c]) return;
-    p.ride = { key: c, started: now, offX: p.x, offZ: p.z + 1.6 };
+    const seat = RIDES[c].plane === 'lost'
+      ? 0 : nearestSeat(c, rideAngles(now)[c], p.x, p.z);
+    p.ride = { key: c, started: now, seat: seat, offX: p.x, offZ: p.z + 1.6 };
     p.rides += 1;
     p.walking = false;
   }
 
   rideStep(p, now){
-    const R = RIDES[p.ride.key];
-    const t = Math.min(1, (now - p.ride.started) / (R.secs * 1000));
+    const key = p.ride.key;
+    const R = RIDES[key];
+    const done = (now - p.ride.started) >= rideSeconds(key) * 1000;
 
     if (R.plane === 'lost'){
-      if (t >= 1){
+      if (done){
         const spot = randomOpenTile(Math.random);
         p.x = spot.x; p.z = spot.z; p.h = 0; p.ride = null;
         p.say = { text: 'where am I', until: now + 4000 };
@@ -265,11 +304,12 @@ export class Park {
       return;
     }
 
-    const pose = ridePose(p.ride.key, t);
+    const pose = seatPose(key, p.ride.seat, rideAngles(now)[key]);
     p.x = pose.x; p.z = pose.z; p.h = pose.h; p.dir = pose.dir;
 
-    if (t >= 1){
-      /* step off onto the tile in front of the boarding point */
+    /* Only let people off near the bottom, so nobody is dropped from the top
+       of the wheel the moment their time is up. */
+    if (done && p.h < (R.plane === 'vertical' ? R.hub - R.r + 0.9 : 99)){
       let ox = p.ride.offX, oz = p.ride.offZ;
       if (blocked(ox, oz, 0.3)){ ox = SPAWN.x; oz = SPAWN.z; }
       p.x = ox; p.z = oz; p.h = 0; p.ride = null;
@@ -286,7 +326,13 @@ export class Park {
       s: p.say ? p.say.text : null,
       c: p.rides
     }));
-    const msg = JSON.stringify({ t: 'world', p: all });
+    /* the ride angles travel with every update so the models the browser
+       draws are turned to exactly where the server thinks they are */
+    const a = rideAngles();
+    const msg = JSON.stringify({
+      t: 'world', p: all,
+      a: { F: r2(a.F % (Math.PI*2)), C: r2(a.C % (Math.PI*2)), S: r2(a.S % (Math.PI*2)) }
+    });
     for (const p of this.players){ try { p.ws.send(msg); } catch {} }
   }
 }

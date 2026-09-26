@@ -7,7 +7,8 @@
    ground, does the park survive nonsense input and people leaving.
    ========================================================================== */
 
-import { Park, MAP, MW, MH, RIDES, SPAWN, solid, blocked, ridePose, randomOpenTile }
+import { Park, MAP, MW, MH, RIDES, SPAWN, solid, blocked,
+         seatPose, rideAngles, nearestSeat, rideSeconds, randomOpenTile }
   from './worker-single.js';
 
 const pending = [];
@@ -76,9 +77,12 @@ console.log('\nsunday park\n');
 
 /* ---------- rides ---------------------------------------------------------- */
 {
-  /* the wheel must actually lift, the flat rides must not */
+  /* Sweep a whole turn of each ride, every seat, and see where riders go. */
   const heights = [];
-  for (let i = 0; i <= 40; i++) heights.push(ridePose('F', i/40).h);
+  for (let i = 0; i <= 60; i++){
+    const rot = (i/60) * Math.PI * 2;
+    for (let s = 0; s < RIDES.F.seats; s++) heights.push(seatPose('F', s, rot).h);
+  }
   check('the big wheel lifts you well off the ground',
         Math.max(...heights) > 10, Math.max(...heights).toFixed(1));
   check('and brings you back down low',
@@ -87,14 +91,45 @@ console.log('\nsunday park\n');
         heights.every(h => h >= -0.01), Math.min(...heights).toFixed(2));
 
   for (const key of ['C', 'S']){
-    let lo = 99, hi = -99, outside = 0;
-    for (let i = 0; i <= 40; i++){
-      const q = ridePose(key, i/40);
-      lo = Math.min(lo, q.h); hi = Math.max(hi, q.h);
-      if (q.x < 1 || q.z < 1 || q.x > MW-1 || q.z > MH-1) outside++;
+    let lo = 99, outside = 0;
+    for (let i = 0; i <= 60; i++){
+      const rot = (i/60) * Math.PI * 2;
+      for (let s = 0; s < RIDES[key].seats; s++){
+        const q = seatPose(key, s, rot);
+        lo = Math.min(lo, q.h);
+        if (q.x < 1 || q.z < 1 || q.x > MW-1 || q.z > MH-1) outside++;
+      }
     }
     check('ride ' + key + ' stays above ground', lo >= -0.01, lo.toFixed(2));
     check('ride ' + key + ' stays inside the park', outside === 0, outside);
+  }
+
+  /* Two riders must never be handed the same seat at the same moment, and a
+     seat must stay the same seat as the ride turns. */
+  const rot0 = rideAngles(0).F;
+  const seatsA = [];
+  for (let s = 0; s < RIDES.F.seats; s++){
+    const p = seatPose('F', s, rot0);
+    seatsA.push(p.x.toFixed(2) + ',' + p.h.toFixed(2));
+  }
+  check('every cabin is in a different place',
+        new Set(seatsA).size === RIDES.F.seats, seatsA.join(' '));
+
+  /* a full turn brings a seat back to where it started */
+  const a0 = seatPose('F', 0, 0), a1 = seatPose('F', 0, Math.PI * 2);
+  check('a full turn returns a cabin to its start',
+        Math.abs(a0.x - a1.x) < 1e-6 && Math.abs(a0.h - a1.h) < 1e-6);
+
+  /* boarding picks a car near you, not one across the ride */
+  for (const key of ['F', 'C', 'S']){
+    const rot = rideAngles(1234567)[key];
+    let at = null;
+    for (let y = 0; y < MH; y++){ const x = MAP[y].indexOf(key); if (x >= 0) at = [x+0.5, y+0.5]; }
+    const seat = nearestSeat(key, rot, at[0], at[1]);
+    const p = seatPose(key, seat, rot);
+    const d = Math.hypot(p.x - at[0], p.z - at[1]);
+    check(key + ': you board a car near the platform, not across the ride',
+          d < RIDES[key].r * 1.4 + 1, d.toFixed(2));
   }
 }
 
@@ -113,10 +148,12 @@ console.log('\nsunday park\n');
     park.maybeBoard(p, Date.now());
     check(key + ': standing on the tile starts the ride', !!p.ride, String(p.ride));
 
-    /* run it to the end */
-    const started = p.ride.started;
-    p.ride.started = started - RIDES[key].secs * 1000 - 10;
-    park.rideStep(p, Date.now());
+    /* run it past its time, then keep ticking until it lets you off. The
+       wheel deliberately waits until your cabin is near the bottom. */
+    p.ride.started = Date.now() - rideSeconds(key) * 1000 - 10;
+    for (let i = 0; i < 2000 && p.ride; i++){
+      park.rideStep(p, Date.now() + i * 200);
+    }
     check(key + ': the ride ends', p.ride === null);
     check(key + ': you are not left inside anything',
           !blocked(p.x, p.z, 0.3), p.x.toFixed(1) + ',' + p.z.toFixed(1));
