@@ -39,6 +39,8 @@ next to be the one falling.
 4. Every **100 metres** the runner banks a **Leap**: a very high jump that then
    hangs in the air. The runner also has **Slow**: one second at half pace on a
    six second cooldown, which is their one say in how hard the drawer's life is.
+   The drawer is told what is coming and how high to build for it, because the
+   screen shows about eighteen metres and their reach is twenty six.
 5. The runner falls. The board pulls back and replays the whole run, ending
    where they fell. The pair score the metres. Roles swap. Four rounds.
 
@@ -173,6 +175,25 @@ chalk faster than the runner crosses it. Real people land between the two,
 which is the range the numbers were tuned for. Run it after touching the speed
 steps, the chalk budget, the jump, or the level generator.
 
+### The QR of the join link
+
+Written out rather than pulled from a library, because the whole game is one
+file: pack the bytes, add Reed-Solomon over GF(256), lay out the grid, pick the
+mask with the lowest penalty, write the format bits. Error correction L,
+versions one to five, where every version is a single block and there is no
+interleaving to get wrong.
+
+There is no scanner on the machine it was written on, so `qrcheck.mjs` takes it
+apart from the other end instead: finder patterns in the right places, timing
+lines alternating, the format word decoding back through its BCH code to the
+level and mask that were chosen, the link coming back out of the data path, and
+**every Reed-Solomon syndrome zero**.
+
+That last one earned its keep immediately. The generator polynomial was being
+built backwards, so every code carried the right text with parity for a
+different polynomial: it round-tripped perfectly in software and no scanner on
+earth would have read it.
+
 ### Tests
 
 Two suites, both against the files that actually ship.
@@ -185,7 +206,7 @@ milestones, the leap being banked and spent, the practice bot staying within
 reach, the leaderboard sorting and capping and surviving a reload, and the idle
 board shutting itself down.
 
-`node smoke.mjs` runs **36 checks against the browser half**. There is no real
+`node smoke.mjs` runs **54 checks against the browser half**. There is no real
 browser here, so `domshim.mjs` is a small hand written DOM and the client is
 driven with the exact messages the server sends. It cannot tell you whether the
 game looks good. It can tell you whether the screen says the right numbers,
@@ -198,8 +219,9 @@ throws.
 ```
 python3 build.py        # writes worker-single.js, checks it is plain ASCII
 node test.mjs           # 218 server checks
-node smoke.mjs          # 36 client checks
+node smoke.mjs          # 54 client checks
 node balance.mjs        # sixty rounds, to see if it is still fair
+node qrcheck.mjs        # 24 checks that the QR is a real QR
 ```
 
 Then upload `worker-single.js` as a Cloudflare Worker with a Durable Object

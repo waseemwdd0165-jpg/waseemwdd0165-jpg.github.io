@@ -166,7 +166,7 @@ ul.list li:first-child{border-top:0}
   backdrop-filter:blur(6px);
 }
 #role{font-weight:600}
-#dist{font-family:"Caveat",cursive;font-size:30px;line-height:1;padding:3px 15px 5px}
+#dist{font-family:"Caveat",cursive;font-size:30px;line-height:1;padding:3px 15px 5px;margin-top:6px}
 #lvl{color:var(--warn)}
 
 /* the run of milestones across the top, filling as you pass them */
@@ -1304,7 +1304,8 @@ function drawMilestones(r){
     ctx.font = '700 21px "Caveat", cursive';
     ctx.fillStyle = passed ? 'rgba(245,185,115,.85)' : 'rgba(244,243,233,.48)';
     ctx.textAlign = 'center';
-    ctx.fillText(d + ' m', X, VH * 0.15);
+    /* kept off the edges, or half of "150 m" hangs outside a phone screen */
+    ctx.fillText(d + ' m', Math.max(34, Math.min(VW - 34, X)), VH * 0.15);
   }
 
   /* the record, standing out there on the board waiting to be run past */
@@ -1317,7 +1318,8 @@ function drawMilestones(r){
       ctx.font = '700 22px "Caveat", cursive';
       ctx.fillStyle = 'rgba(232,119,107,.95)';
       ctx.textAlign = 'center';
-      ctx.fillText('record ' + recordBefore + ' m', RX, VH * 0.09);
+      ctx.fillText('record ' + recordBefore + ' m',
+                   Math.max(62, Math.min(VW - 62, RX)), VH * 0.09);
     }
   }
   ctx.restore();
