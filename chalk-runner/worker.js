@@ -502,14 +502,25 @@ export class Board {
       let m; try { m = JSON.parse(e.data); } catch { return; }
       this.onMessage(server, m);
     });
-    const gone = () => this.onClose(server);
-    server.addEventListener('close', gone);
-    server.addEventListener('error', gone);
+    /* The close has to be answered. Without this the browser sat in CLOSING
+       for ever, never fired its own close event, and so never knew it had to
+       come back. Found by pulling the plug on a live round. */
+    server.addEventListener('close', e => {
+      const code = (e && e.code >= 1000 && e.code < 5000 && e.code !== 1005 && e.code !== 1006)
+        ? e.code : 1000;
+      try { server.close(code, (e && e.reason) || ''); } catch {}
+      this.onClose(server);
+    });
+    server.addEventListener('error', () => this.onClose(server));
     return new Response(null, { status: 101, webSocket: client });
   }
 
   /* ---------- messages ------------------------------------------------------ */
   onMessage(ws, m){
+    /* A heartbeat says the tab is still there, which is not the same as
+       somebody playing, so it deliberately does not hold off the idle
+       timeout. Otherwise a tab left open overnight keeps a room running. */
+    if (m.t === 'ping'){ send(ws, { t:'pong' }); return; }
     this.lastActive = Date.now();
 
     if (m.t === 'join'){

@@ -807,6 +807,18 @@ console.log('\nchalk runner\n');
   b.lastTick = Date.now() - 33; b.tick();
   check('the round carries on', b.runner.x > ranTo, b.runner.x.toFixed(2));
 
+  /* the heartbeat answers, and deliberately does not count as playing */
+  const beat = sock();
+  b.onMessage(beat, { t:'join', name:'Beat' });
+  const before = b.lastActive;
+  b.lastActive = before - 60000;
+  b.onMessage(beat, { t:'ping' });
+  check('a ping is answered', !!last(beat, 'pong'));
+  check('but it does not hold the room open', b.lastActive === before - 60000, b.lastActive - before);
+  b.lastActive = before;
+  b.players = b.players.filter(p => p.name !== 'Beat');
+  b.sockets.delete(beat);
+
   /* a key nobody holds is just a stranger at a closed door */
   const stranger = sock();
   b.onMessage(stranger, { t:'join', name:'Nope', key:'not-a-real-key' });

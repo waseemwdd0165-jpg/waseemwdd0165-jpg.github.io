@@ -582,7 +582,9 @@ function connect(rc, name, create, solo){
     ws.send(JSON.stringify({ t:'join', name:name, create: !!create, key: myKey || undefined }));
   };
   ws.onmessage = function(e){
+    heard = Date.now();
     var m; try { m = JSON.parse(e.data); } catch(_){ return; }
+    if (m.t === 'pong') return;
     onServer(m, btn, create, label);
   };
   ws.onerror = function(){
@@ -639,7 +641,9 @@ function reopen(){
   catch(_){ lostConnection(); return; }
   ws.onopen = function(){ ws.send(JSON.stringify({ t:'join', name:myName, key:myKey })); };
   ws.onmessage = function(e){
+    heard = Date.now();
     var m; try { m = JSON.parse(e.data); } catch(_){ return; }
+    if (m.t === 'pong') return;
     onServer(m, { disabled:false, textContent:'' }, false, '');
   };
   ws.onerror = function(){};
@@ -650,6 +654,20 @@ function banner(big, small){
   $('banner-small').textContent = small || '';
   $('banner').style.display = 'block';
 }
+
+/* A phone that walks out of signal does not get to send a close frame, so the
+   socket can sit there looking open for minutes. A heartbeat both ways means
+   silence is noticed in about twelve seconds. */
+var heard = 0;
+setInterval(function(){
+  if (!ws || ws.readyState !== 1) return;
+  try { ws.send(JSON.stringify({ t:'ping' })); } catch(_){}
+  if (heard && Date.now() - heard > 12000){
+    heard = 0;
+    try { ws.close(4000, 'silent'); } catch(_){}
+    lostConnection();
+  }
+}, 4000);
 function resetButtons(){
   $('btn-create').disabled = false; $('btn-create').textContent = 'Start a board';
   $('btn-solo').disabled = false;   $('btn-solo').textContent = 'Practise alone';
@@ -2160,14 +2178,25 @@ export class Board {
       let m; try { m = JSON.parse(e.data); } catch { return; }
       this.onMessage(server, m);
     });
-    const gone = () => this.onClose(server);
-    server.addEventListener('close', gone);
-    server.addEventListener('error', gone);
+    /* The close has to be answered. Without this the browser sat in CLOSING
+       for ever, never fired its own close event, and so never knew it had to
+       come back. Found by pulling the plug on a live round. */
+    server.addEventListener('close', e => {
+      const code = (e && e.code >= 1000 && e.code < 5000 && e.code !== 1005 && e.code !== 1006)
+        ? e.code : 1000;
+      try { server.close(code, (e && e.reason) || ''); } catch {}
+      this.onClose(server);
+    });
+    server.addEventListener('error', () => this.onClose(server));
     return new Response(null, { status: 101, webSocket: client });
   }
 
   /* ---------- messages ------------------------------------------------------ */
   onMessage(ws, m){
+    /* A heartbeat says the tab is still there, which is not the same as
+       somebody playing, so it deliberately does not hold off the idle
+       timeout. Otherwise a tab left open overnight keeps a room running. */
+    if (m.t === 'ping'){ send(ws, { t:'pong' }); return; }
     this.lastActive = Date.now();
 
     if (m.t === 'join'){

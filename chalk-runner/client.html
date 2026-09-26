@@ -575,7 +575,9 @@ function connect(rc, name, create, solo){
     ws.send(JSON.stringify({ t:'join', name:name, create: !!create, key: myKey || undefined }));
   };
   ws.onmessage = function(e){
+    heard = Date.now();
     var m; try { m = JSON.parse(e.data); } catch(_){ return; }
+    if (m.t === 'pong') return;
     onServer(m, btn, create, label);
   };
   ws.onerror = function(){
@@ -632,7 +634,9 @@ function reopen(){
   catch(_){ lostConnection(); return; }
   ws.onopen = function(){ ws.send(JSON.stringify({ t:'join', name:myName, key:myKey })); };
   ws.onmessage = function(e){
+    heard = Date.now();
     var m; try { m = JSON.parse(e.data); } catch(_){ return; }
+    if (m.t === 'pong') return;
     onServer(m, { disabled:false, textContent:'' }, false, '');
   };
   ws.onerror = function(){};
@@ -643,6 +647,20 @@ function banner(big, small){
   $('banner-small').textContent = small || '';
   $('banner').style.display = 'block';
 }
+
+/* A phone that walks out of signal does not get to send a close frame, so the
+   socket can sit there looking open for minutes. A heartbeat both ways means
+   silence is noticed in about twelve seconds. */
+var heard = 0;
+setInterval(function(){
+  if (!ws || ws.readyState !== 1) return;
+  try { ws.send(JSON.stringify({ t:'ping' })); } catch(_){}
+  if (heard && Date.now() - heard > 12000){
+    heard = 0;
+    try { ws.close(4000, 'silent'); } catch(_){}
+    lostConnection();
+  }
+}, 4000);
 function resetButtons(){
   $('btn-create').disabled = false; $('btn-create').textContent = 'Start a board';
   $('btn-solo').disabled = false;   $('btn-solo').textContent = 'Practise alone';
