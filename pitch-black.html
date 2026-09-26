@@ -1,0 +1,988 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<title>Pitch Black - Waseem Ansari</title>
+<meta name="description" content="A multiplayer stealth game played in the dark. Your torch is how you see and how you get found. One hunter, everyone else runs for the exit.">
+
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="Waseem Ahmad Ansari">
+<meta property="og:url" content="https://waseemwdd0165-jpg.github.io/pitch-black.html">
+<meta property="og:title" content="Pitch Black">
+<meta property="og:description" content="A multiplayer stealth game played in the dark. Every player sees only what their own torch lights. One hunter, everyone else runs for the exit.">
+<meta property="og:image" content="https://waseemwdd0165-jpg.github.io/og-cover.png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="Pitch Black">
+<meta name="twitter:description" content="Your torch is how you see and how you get found.">
+<meta name="twitter:image" content="https://waseemwdd0165-jpg.github.io/og-cover.png">
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/peerjs/1.5.4/peerjs.min.js"></script>
+
+<style>
+:root{
+  --ground:#05060A;
+  --panel:rgba(255,255,255,.04);
+  --line:rgba(255,255,255,.10);
+  --ink:#F2F4F9;
+  --muted:#98A1B6;
+  --dim:#666F86;
+  --accent:#5B7CFF;
+  --hunter:#FF5B5B;
+  --runner:#3ECF8E;
+  --radius:14px;
+}
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+html,body{height:100%;overflow:hidden}
+body{
+  background:var(--ground);color:var(--ink);
+  font:16px/1.5 "IBM Plex Sans",-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;
+  -webkit-font-smoothing:antialiased;
+  display:flex;align-items:center;justify-content:center;
+}
+.menu{
+  position:absolute;inset:0;overflow-y:auto;
+  padding:24px 16px 40px;
+  display:flex;align-items:flex-start;justify-content:center;
+}
+.menu::before{
+  content:"";position:fixed;inset:0;z-index:-1;pointer-events:none;
+  background:radial-gradient(700px 480px at 50% 0%, rgba(91,124,255,.14), transparent 70%);
+}
+.wrap{width:100%;max-width:560px}
+
+.eyebrow{
+  font:500 11px/1 "IBM Plex Mono",ui-monospace,monospace;
+  letter-spacing:.18em;text-transform:uppercase;color:var(--accent);margin-bottom:10px;
+}
+h1{font-size:clamp(30px,8vw,44px);line-height:1.05;letter-spacing:-.025em;font-weight:800;margin-bottom:10px}
+.tagline{color:var(--muted);font-size:15px;margin-bottom:6px}
+.backlink{display:inline-block;margin-top:14px;color:var(--dim);text-decoration:none;font-size:13px;border-bottom:1px solid var(--line);padding-bottom:2px}
+.backlink:hover{color:var(--ink)}
+
+.card{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);padding:20px;margin-top:16px}
+.card h2{font-size:16px;font-weight:600;margin-bottom:5px}
+.card .sub{color:var(--muted);font-size:13.5px;margin-bottom:14px}
+
+label{display:block;font-size:12px;color:var(--muted);margin-bottom:6px}
+input[type=text]{
+  width:100%;padding:12px 14px;border-radius:10px;
+  background:rgba(0,0,0,.35);border:1px solid var(--line);color:var(--ink);
+  font-size:16px;font-family:inherit;
+}
+input[type=text]:focus{outline:none;border-color:var(--accent)}
+input.code{font:700 22px/1 "IBM Plex Mono",ui-monospace,monospace;letter-spacing:.24em;text-transform:uppercase;text-align:center}
+
+button{
+  font:600 15px/1 inherit;cursor:pointer;border:0;border-radius:10px;
+  padding:13px 18px;background:var(--accent);color:#fff;width:100%;
+}
+button:hover{opacity:.9}
+button:disabled{opacity:.4;cursor:not-allowed}
+button.ghost{background:transparent;border:1px solid var(--line);color:var(--ink)}
+.row{margin-top:14px}
+
+.roomcode{font:800 40px/1 "IBM Plex Mono",ui-monospace,monospace;letter-spacing:.2em;text-align:center;color:var(--accent);padding:16px 0 8px}
+.copyhint{text-align:center;color:var(--dim);font-size:12.5px}
+ul.players{list-style:none;margin-top:14px}
+ul.players li{display:flex;justify-content:space-between;padding:10px 0;border-top:1px solid var(--line);font-size:14.5px}
+ul.players li:first-child{border-top:0}
+.badge{font:500 10.5px/1 "IBM Plex Mono",ui-monospace,monospace;letter-spacing:.1em;text-transform:uppercase;color:var(--accent);background:rgba(91,124,255,.14);padding:5px 8px;border-radius:5px}
+
+.rules{list-style:none;font-size:14px;color:var(--muted)}
+.rules li{padding:7px 0 7px 20px;position:relative}
+.rules li::before{content:"-";position:absolute;left:4px;color:var(--accent)}
+
+.banner{border:1px solid rgba(255,91,91,.4);background:rgba(255,91,91,.08);border-radius:10px;padding:14px 16px;margin-bottom:14px;font-size:14px;color:#FFC9C9}
+.banner b{display:block;color:var(--ink);font-weight:600;margin-bottom:4px}
+.err{color:var(--hunter);font-size:13.5px;margin-top:10px}
+.status{font:500 11.5px/1 "IBM Plex Mono",ui-monospace,monospace;letter-spacing:.1em;text-transform:uppercase;color:var(--dim);text-align:center;margin-top:16px}
+.hidden{display:none!important}
+
+/* ---------- the arena ---------- */
+#stage{position:fixed;inset:0;background:#000}
+canvas{position:absolute;inset:0;width:100%;height:100%;display:block;touch-action:none}
+
+#hud{position:absolute;top:0;left:0;right:0;padding:14px 16px;display:flex;justify-content:space-between;align-items:flex-start;pointer-events:none;font:600 13px/1.3 "IBM Plex Mono",ui-monospace,monospace;letter-spacing:.08em;text-transform:uppercase}
+#hud .role{padding:7px 11px;border-radius:7px;background:rgba(0,0,0,.6);border:1px solid var(--line)}
+#hud .role.hunter{color:var(--hunter);border-color:rgba(255,91,91,.45)}
+#hud .role.runner{color:var(--runner);border-color:rgba(62,207,142,.45)}
+#hud .right{text-align:right;color:var(--muted);background:rgba(0,0,0,.6);border:1px solid var(--line);padding:7px 11px;border-radius:7px}
+
+#toast{
+  position:absolute;left:50%;top:38%;transform:translate(-50%,-50%);
+  text-align:center;pointer-events:none;width:86%;max-width:440px;
+}
+#toast .big{font-size:clamp(24px,7vw,38px);font-weight:800;letter-spacing:-.02em;line-height:1.1}
+#toast .small{color:var(--muted);font-size:14px;margin-top:8px}
+
+/* touch stick */
+#stick{position:absolute;left:0;bottom:0;width:50%;height:55%;touch-action:none}
+#stickbase,#stickknob{position:absolute;border-radius:50%;pointer-events:none;opacity:0;transition:opacity .15s}
+#stickbase{width:116px;height:116px;border:2px solid rgba(255,255,255,.18);margin:-58px 0 0 -58px}
+#stickknob{width:52px;height:52px;background:rgba(255,255,255,.22);margin:-26px 0 0 -26px}
+#stick.on #stickbase,#stick.on #stickknob{opacity:1}
+</style>
+</head>
+<body>
+
+<!-- ================= MENU ================= -->
+<div class="menu" id="menu">
+<div class="wrap">
+
+  <div class="eyebrow">Multiplayer Stealth</div>
+  <h1>Pitch Black</h1>
+  <p class="tagline">One hunter. Everyone else is looking for the way out.
+  Your torch is the only thing that lets you see, and the only thing that gives you away.</p>
+  <a class="backlink" href="index.html">Back to portfolio</a>
+
+  <div class="banner hidden" id="env-banner"></div>
+
+  <section id="s-landing">
+    <div class="card">
+      <h2>Start a game</h2>
+      <p class="sub">You host. Share the code, others join from any phone or laptop.</p>
+      <label for="host-name">Your name</label>
+      <input type="text" id="host-name" maxlength="12" placeholder="Waseem" autocomplete="off">
+      <div class="row"><button id="btn-create">Create room</button></div>
+    </div>
+
+    <div class="card">
+      <h2>Join a game</h2>
+      <p class="sub">Four letters from whoever is hosting.</p>
+      <label for="join-name">Your name</label>
+      <input type="text" id="join-name" maxlength="12" placeholder="Your name" autocomplete="off">
+      <label for="join-code" style="margin-top:12px">Room code</label>
+      <input type="text" id="join-code" class="code" maxlength="4" placeholder="ABCD" autocomplete="off">
+      <div class="row"><button class="ghost" id="btn-join">Join room</button></div>
+      <div class="err hidden" id="join-err"></div>
+    </div>
+
+    <div class="card">
+      <h2>How it works</h2>
+      <ul class="rules">
+        <li>The map is dark. You see only what your torch lights, plus a pace or two around your feet.</li>
+        <li>Your torch points where you are moving, so you cannot look one way and walk another.</li>
+        <li>One player starts as the hunter. Everyone else is a runner.</li>
+        <li>Runners win by reaching the green exit. A faint marker at the screen edge points the way.</li>
+        <li>A caught runner joins the hunt, so the odds shift every time somebody falls.</li>
+        <li>Three rounds. Escaping scores 100, catching scores 50.</li>
+      </ul>
+    </div>
+  </section>
+
+  <section id="s-lobby" class="hidden">
+    <div class="card">
+      <h2>Room code</h2>
+      <div class="roomcode" id="lobby-code">----</div>
+      <p class="copyhint" id="copy-hint">Tap the code to copy the join link</p>
+      <ul class="players" id="lobby-players"></ul>
+      <div class="row" id="host-controls"><button id="btn-start" disabled>Start game</button></div>
+      <div class="status hidden" id="lobby-wait">Waiting for the host to start</div>
+    </div>
+  </section>
+
+  <section id="s-final" class="hidden">
+    <div class="card">
+      <h2>Final scores</h2>
+      <p class="sub" id="final-sub"></p>
+      <ul class="players" id="final-list"></ul>
+      <div class="row" id="final-controls"><button id="btn-again">Play again</button></div>
+      <div class="status hidden" id="final-wait">Waiting for the host</div>
+    </div>
+  </section>
+
+  <div class="status" id="conn-status"></div>
+</div>
+</div>
+
+<!-- ================= ARENA ================= -->
+<div id="stage" class="hidden">
+  <canvas id="cv"></canvas>
+  <div id="hud">
+    <div class="role" id="hud-role">Runner</div>
+    <div class="right" id="hud-right">Round 1 of 3</div>
+  </div>
+  <div id="toast" class="hidden"><div class="big" id="toast-big"></div><div class="small" id="toast-small"></div></div>
+  <div id="stick"><div id="stickbase"></div><div id="stickknob"></div></div>
+</div>
+
+<script>
+/* ==========================================================================
+   Pitch Black
+
+   Every device renders the same world from its own player's eyes, so two
+   people looking at the same room see almost nothing in common. The host
+   runs the only authoritative simulation and broadcasts positions; each
+   client predicts its own movement locally so the stick feels immediate,
+   then corrects toward the host.
+
+   Messages
+     client -> host   {t:'join', name} / {t:'in', ax, ay} / {t:'again'}
+     host -> client   {t:'s', ...}  state snapshot, 20 times a second
+                      {t:'r', ...}  round or match result
+   ========================================================================== */
+
+/* ---------- the map ------------------------------------------------------
+   # wall, . floor, E exit, digits are spawn points (0 is where the hunter
+   starts, the rest are runner spawns, spread to the far side).
+   ------------------------------------------------------------------------ */
+var MAP = [
+  "################################",
+  "#...2...#........#.......#....4#",
+  "#.####..#..####..#..###..#..##.#",
+  "#.#..#..#..#..#..#..#....#...#.#",
+  "#.#..####..#..#..####..###...#.#",
+  "#.#........#..#........#.....#.#",
+  "#.#..########..######..#..####.#",
+  "#.#..#......#.......#..#..#....#",
+  "#.####..###.#######.#3.#..#.####",
+  "#.......#.........#.#..#..#....#",
+  "#########.#######.#.#..####..#.#",
+  "#.......#.#.....#.#.#........#.#",
+  "#.#####.#.#..#..#.#.##########.#",
+  "#.#.1.#...#..#..#.#..........#.#",
+  "#.#.#.#####..#..#.########.#.#.#",
+  "#...#........#..#.......0#.#...#",
+  "#.###########.###.######.#.###.#",
+  "#...........#...E......#.......#",
+  "################################"
+];
+var MW = MAP[0].length, MH = MAP.length;
+
+function cell(cx, cy){
+  if (cx < 0 || cy < 0 || cx >= MW || cy >= MH) return '#';
+  return MAP[cy][cx];
+}
+function solid(cx, cy){ return cell(cx, cy) === '#'; }
+
+/* spawn points, read once */
+var SPAWN = [];
+var EXIT = { x: 1.5, y: 1.5 };
+(function(){
+  for (var y = 0; y < MH; y++){
+    for (var x = 0; x < MW; x++){
+      var c = MAP[y][x];
+      if (c >= '0' && c <= '9') SPAWN[Number(c)] = { x: x + 0.5, y: y + 0.5 };
+      if (c === 'E') EXIT = { x: x + 0.5, y: y + 0.5 };
+    }
+  }
+})();
+
+/* ---------- tuning ------------------------------------------------------- */
+var TICK      = 50;     /* ms between host simulation steps */
+var SPEED_RUN = 3.4;    /* cells per second */
+var SPEED_HUN = 3.7;    /* the hunter is a shade faster, enough to matter */
+var FOV_RUN   = 1.15;   /* torch arc in radians */
+var FOV_HUN   = 1.75;   /* wider, so hunters sweep rather than peer */
+var RANGE_RUN = 9.5;
+var RANGE_HUN = 7.5;
+var AMBIENT   = 1.45;   /* you always see this far, torch or not */
+var CATCH     = 0.55;
+var ROUND_MS  = 100000;
+var ROUNDS    = 3;
+
+/* ---------- helpers ------------------------------------------------------ */
+function $(id){ return document.getElementById(id); }
+function esc(s){
+  return String(s).replace(/[&<>"']/g, function(c){
+    return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];
+  });
+}
+function showMenu(id){
+  ['s-landing','s-lobby','s-final'].forEach(function(s){ $(s).classList.add('hidden'); });
+  if (id) $(id).classList.remove('hidden');
+  $('menu').classList.remove('hidden');
+  $('stage').classList.add('hidden');
+}
+function showStage(){
+  $('menu').classList.add('hidden');
+  $('stage').classList.remove('hidden');
+  resize();
+}
+function code4(){
+  var L = 'ABCDEFGHJKLMNPQRSTUVWXYZ', s = '';
+  for (var i = 0; i < 4; i++) s += L[Math.floor(Math.random() * L.length)];
+  return s;
+}
+function status(m){ $('conn-status').textContent = m || ''; }
+function banner(t, b){
+  $('env-banner').innerHTML = '<b>' + esc(t) + '</b>' + esc(b);
+  $('env-banner').classList.remove('hidden');
+}
+function envReady(){
+  if (typeof Peer === 'undefined'){
+    banner('The networking library did not load',
+      'This page pulls PeerJS from a CDN and that request was blocked. It happens ' +
+      'offline and inside sandboxed previews. Open it on a normal connection.');
+    return false;
+  }
+  if (!window.RTCPeerConnection){
+    banner('This browser cannot do WebRTC',
+      'Players connect directly to each other, which needs WebRTC. Current Chrome, ' +
+      'Edge, Firefox and Safari all have it.');
+    return false;
+  }
+  return true;
+}
+
+/* ---------- state -------------------------------------------------------- */
+var ME = { name:'', isHost:false, id:null };
+var peer = null, conns = [], hostConn = null;
+var room = null;    /* host only: authoritative */
+var view = null;    /* client only: last snapshot */
+var myInput = { ax:0, ay:0 };
+var local = null;   /* my predicted position, for a responsive stick */
+var loopId = null;
+
+/* ==========================================================================
+   HOST
+   ========================================================================== */
+function createRoom(){
+  if (!envReady()) return;
+  ME.name = ($('host-name').value || 'Host').trim().slice(0,12) || 'Host';
+  ME.isHost = true;
+  var rc = code4();
+  status('Opening room...');
+
+  peer = new Peer('pb-' + rc, { debug:0 });
+  var opened = false;
+  setTimeout(function(){
+    if (!opened){
+      banner('Could not reach the signalling server',
+        'Players find each other through a public server before connecting directly. ' +
+        'That timed out, usually a firewall blocking WebSockets. Try another network.');
+      status('');
+    }
+  }, 10000);
+
+  peer.on('open', function(){
+    opened = true;
+    ME.id = 'host';
+    room = {
+      code: rc, phase:'lobby', round:0,
+      players:[ newPlayer('host', ME.name) ],
+      endsAt: 0, lastTick: 0
+    };
+    renderLobby(); showMenu('s-lobby');
+    status('Room open. Code ' + rc);
+  });
+
+  peer.on('connection', function(c){
+    conns.push(c);
+    c.on('data', function(m){ onHostMessage(c, m); });
+    c.on('close', function(){
+      conns = conns.filter(function(x){ return x !== c; });
+      if (!room) return;
+      room.players = room.players.filter(function(p){ return p.id !== c.peer; });
+      if (room.phase === 'lobby') renderLobby();
+      broadcast();
+    });
+  });
+
+  peer.on('error', function(e){
+    if (String(e.type) === 'unavailable-id'){
+      status('Code in use, retrying...');
+      try { peer.destroy(); } catch(_){}
+      setTimeout(createRoom, 150);
+    } else {
+      status('Connection problem: ' + e.type);
+    }
+  });
+}
+
+function newPlayer(id, name){
+  return { id:id, name:name, x:1.5, y:1.5, dir:0, role:'runner',
+           out:false, escaped:false, score:0, ax:0, ay:0 };
+}
+
+function onHostMessage(c, m){
+  if (!room || !m) return;
+
+  if (m.t === 'join'){
+    if (room.phase !== 'lobby'){ try { c.send({ t:'closed' }); } catch(_){} return; }
+    if (room.players.length >= 8){ try { c.send({ t:'full' }); } catch(_){} return; }
+    room.players.push(newPlayer(c.peer, String(m.name || 'Player').slice(0,12)));
+    renderLobby(); broadcast();
+  }
+
+  if (m.t === 'in'){
+    var p = pById(c.peer);
+    if (p){ p.ax = clamp1(m.ax); p.ay = clamp1(m.ay); }
+  }
+
+  if (m.t === 'again' && room.phase === 'over') hostRestart();
+}
+
+function pById(id){
+  for (var i = 0; i < room.players.length; i++) if (room.players[i].id === id) return room.players[i];
+  return null;
+}
+function clamp1(v){ v = Number(v) || 0; return v < -1 ? -1 : v > 1 ? 1 : v; }
+
+function hostStart(){
+  room.round = 0;
+  room.players.forEach(function(p){ p.score = 0; });
+  beginRound();
+}
+
+function beginRound(){
+  var ps = room.players;
+  /* the hunter rotates, so nobody is stuck in one role all night */
+  var hunterIdx = room.round % ps.length;
+  var nth = 0;   /* runners take spawns 1..4 in turn, never doubling up */
+  ps.forEach(function(p, i){
+    p.role    = (i === hunterIdx) ? 'hunter' : 'runner';
+    p.out     = false;
+    p.escaped = false;
+    p.ax = 0; p.ay = 0;
+    var sp = (i === hunterIdx) ? SPAWN[0] : SPAWN[1 + (nth++ % 4)];
+    if (!sp) sp = SPAWN[0];
+    p.x = sp.x; p.y = sp.y; p.dir = 0;
+  });
+  room.phase = 'play';
+  room.endsAt = Date.now() + ROUND_MS;
+  room.lastTick = Date.now();
+  broadcast();
+  hostRender();
+  if (!loopId) loopId = setInterval(hostTick, TICK);
+}
+
+function hostTick(){
+  if (!room || room.phase !== 'play') return;
+  var now = Date.now();
+  var dt = Math.min(0.2, (now - room.lastTick) / 1000);
+  room.lastTick = now;
+
+  room.players.forEach(function(p){
+    if (p.out || p.escaped) return;
+    stepPlayer(p, dt);
+  });
+
+  /* catches: any hunter close enough to a live runner */
+  var hunters = room.players.filter(function(p){ return p.role === 'hunter' && !p.escaped; });
+  room.players.forEach(function(r){
+    if (r.role !== 'runner' || r.out || r.escaped) return;
+    for (var i = 0; i < hunters.length; i++){
+      var h = hunters[i];
+      if (dist2(h, r) < CATCH * CATCH){
+        r.role = 'hunter';          /* caught runners join the hunt */
+        r.out  = false;
+        h.score += 50;
+        pushEvent(r.name + ' was caught');
+        break;
+      }
+    }
+  });
+
+  /* escapes */
+  room.players.forEach(function(r){
+    if (r.role !== 'runner' || r.escaped) return;
+    if (dist2(r, EXIT) < 0.45 * 0.45){
+      r.escaped = true;
+      r.score += 100;
+      pushEvent(r.name + ' got out');
+    }
+  });
+
+  var runnersLeft = room.players.filter(function(p){ return p.role === 'runner' && !p.escaped; }).length;
+  if (runnersLeft === 0 || now >= room.endsAt) endRound();
+  else broadcast();
+}
+
+function stepPlayer(p, dt){
+  var ax = p.ax, ay = p.ay;
+  var mag = Math.sqrt(ax * ax + ay * ay);
+  if (mag > 1){ ax /= mag; ay /= mag; mag = 1; }
+  if (mag > 0.08){
+    p.dir = Math.atan2(ay, ax);
+    var sp = (p.role === 'hunter' ? SPEED_HUN : SPEED_RUN) * dt;
+    moveWithWalls(p, ax * sp, ay * sp);
+  }
+}
+
+/* Axes are resolved separately so sliding along a wall feels right instead
+   of sticking the moment one axis is blocked. */
+function moveWithWalls(p, dx, dy){
+  var r = 0.26;
+  var nx = p.x + dx;
+  if (!blocked(nx, p.y, r)) p.x = nx;
+  var ny = p.y + dy;
+  if (!blocked(p.x, ny, r)) p.y = ny;
+}
+function blocked(x, y, r){
+  return solid(Math.floor(x - r), Math.floor(y - r)) ||
+         solid(Math.floor(x + r), Math.floor(y - r)) ||
+         solid(Math.floor(x - r), Math.floor(y + r)) ||
+         solid(Math.floor(x + r), Math.floor(y + r));
+}
+function dist2(a, b){ var dx = a.x - b.x, dy = a.y - b.y; return dx * dx + dy * dy; }
+
+var events = [];
+function pushEvent(text){ events.push({ text:text, at:Date.now() }); }
+
+function endRound(){
+  room.phase = 'result';
+  var escaped = room.players.filter(function(p){ return p.escaped; }).length;
+  room.resultBig   = escaped ? (escaped === 1 ? 'One got out' : escaped + ' got out') : 'Nobody got out';
+  room.resultSmall = 'Round ' + (room.round + 1) + ' of ' + ROUNDS;
+  broadcast(); hostRender();
+
+  setTimeout(function(){
+    if (!room) return;
+    room.round += 1;
+    if (room.round >= ROUNDS){
+      room.phase = 'over';
+      broadcast(); hostRender();
+    } else {
+      beginRound();
+    }
+  }, 4000);
+}
+
+function hostRestart(){ hostStart(); }
+
+function broadcast(){
+  if (!room) return;
+  var snap = {
+    t:'s', phase:room.phase, code:room.code,
+    round:room.round, rounds:ROUNDS,
+    left: room.phase === 'play' ? Math.max(0, room.endsAt - Date.now()) : 0,
+    big: room.resultBig || '', small: room.resultSmall || '',
+    ev: events.slice(-3),
+    p: room.players.map(function(p){
+      return { i:p.id, n:p.name, x:Math.round(p.x*100)/100, y:Math.round(p.y*100)/100,
+               d:Math.round(p.dir*100)/100, r:p.role, o:p.out, e:p.escaped, s:p.score };
+    })
+  };
+  for (var i = 0; i < conns.length; i++){ try { conns[i].send(snap); } catch(_){} }
+}
+
+/* the host has no snapshot to react to, so it draws itself off the same phase */
+function hostRender(){
+  if (!room) return;
+  if (room.phase === 'lobby'){ renderLobby(); showMenu('s-lobby'); }
+  if (room.phase === 'play' || room.phase === 'result'){ showStage(); }
+  if (room.phase === 'over'){ renderFinal(); showMenu('s-final'); }
+}
+
+/* ==========================================================================
+   CLIENT
+   ========================================================================== */
+function joinRoom(){
+  if (!envReady()) return;
+  var name = ($('join-name').value || 'Player').trim().slice(0,12) || 'Player';
+  var rc = ($('join-code').value || '').trim().toUpperCase();
+  if (rc.length !== 4){
+    $('join-err').textContent = 'The room code is four letters.';
+    $('join-err').classList.remove('hidden');
+    return;
+  }
+  $('join-err').classList.add('hidden');
+  ME.name = name; ME.isHost = false;
+  status('Connecting to ' + rc + '...');
+
+  peer = new Peer(null, { debug:0 });
+  peer.on('open', function(){
+    hostConn = peer.connect('pb-' + rc, { reliable:false });
+    hostConn.on('open', function(){
+      hostConn.send({ t:'join', name:name });
+      ME.id = peer.id;
+      status('Connected to ' + rc);
+      $('host-controls').classList.add('hidden');
+      $('lobby-wait').classList.remove('hidden');
+      $('lobby-code').textContent = rc;
+      $('copy-hint').textContent = 'You are in. Waiting for the others.';
+      showMenu('s-lobby');
+      setInterval(sendInput, TICK);
+    });
+    hostConn.on('data', onClientMessage);
+    hostConn.on('close', function(){ status('The host closed the room.'); });
+  });
+  peer.on('error', function(e){
+    $('join-err').textContent = (String(e.type) === 'peer-unavailable')
+      ? 'No room with that code is open right now.' : 'Connection problem: ' + e.type;
+    $('join-err').classList.remove('hidden');
+    status('');
+  });
+}
+
+function sendInput(){
+  if (!hostConn || !hostConn.open) return;
+  try { hostConn.send({ t:'in', ax:myInput.ax, ay:myInput.ay }); } catch(_){}
+}
+
+function onClientMessage(m){
+  if (!m) return;
+  if (m.t === 'closed'){
+    $('join-err').textContent = 'That game has already started.';
+    $('join-err').classList.remove('hidden'); showMenu('s-landing'); return;
+  }
+  if (m.t === 'full'){
+    $('join-err').textContent = 'That room is full, eight players is the limit.';
+    $('join-err').classList.remove('hidden'); showMenu('s-landing'); return;
+  }
+  if (m.t !== 's') return;
+
+  view = m;
+  if (m.phase === 'lobby'){ renderLobby(); showMenu('s-lobby'); }
+  if (m.phase === 'play' || m.phase === 'result'){ showStage(); }
+  if (m.phase === 'over'){ renderFinal(); showMenu('s-final'); }
+}
+
+/* ==========================================================================
+   SHARED READS
+   ========================================================================== */
+function players(){
+  if (ME.isHost && room){
+    return room.players.map(function(p){
+      return { i:p.id, n:p.name, x:p.x, y:p.y, d:p.dir, r:p.role, o:p.out, e:p.escaped, s:p.score };
+    });
+  }
+  return (view && view.p) || [];
+}
+function phase(){ return ME.isHost && room ? room.phase : (view ? view.phase : 'lobby'); }
+function me(){
+  var id = ME.isHost ? 'host' : ME.id;
+  var ps = players();
+  for (var i = 0; i < ps.length; i++) if (ps[i].i === id) return ps[i];
+  return null;
+}
+
+/* ==========================================================================
+   MENU RENDERING
+   ========================================================================== */
+function renderLobby(){
+  var ps = players();
+  $('lobby-code').textContent = ME.isHost && room ? room.code : (view && view.code) || '----';
+  $('lobby-players').innerHTML = ps.map(function(p, i){
+    return '<li><span>' + esc(p.n) + '</span>' +
+      (i === 0 ? '<span class="badge">host</span>' : '<span style="color:var(--dim);font-size:13px">ready</span>') +
+      '</li>';
+  }).join('');
+  if (ME.isHost){
+    $('btn-start').disabled = ps.length < 2;
+    $('btn-start').textContent = ps.length < 2
+      ? 'Waiting for one more player'
+      : 'Start game (' + ps.length + ' players)';
+  }
+}
+
+function renderFinal(){
+  var ps = players().slice().sort(function(a, b){ return b.s - a.s; });
+  $('final-sub').textContent = ps.length ? ps[0].n + ' finished on ' + ps[0].s + '.' : '';
+  $('final-list').innerHTML = ps.map(function(p, i){
+    return '<li><span>' + (i + 1) + '. ' + esc(p.n) + '</span><span>' + p.s + '</span></li>';
+  }).join('');
+  if (ME.isHost){
+    $('final-controls').classList.remove('hidden');
+    $('final-wait').classList.add('hidden');
+  } else {
+    $('final-controls').classList.add('hidden');
+    $('final-wait').classList.remove('hidden');
+  }
+}
+
+/* ==========================================================================
+   ARENA RENDERING
+   ========================================================================== */
+var cv = $('cv'), ctx = cv.getContext('2d'), VW = 0, VH = 0, DPR = 1;
+
+function resize(){
+  DPR = Math.min(2, window.devicePixelRatio || 1);
+  VW = cv.clientWidth; VH = cv.clientHeight;
+  cv.width = Math.round(VW * DPR); cv.height = Math.round(VH * DPR);
+  ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
+}
+window.addEventListener('resize', resize);
+
+/* Cast a ray until it meets a wall. Small fixed steps beat a proper DDA for
+   readability here and the cost is nothing at this map size. */
+function castRay(ox, oy, ang, maxD){
+  var sx = Math.cos(ang) * 0.06, sy = Math.sin(ang) * 0.06;
+  var x = ox, y = oy, d = 0;
+  while (d < maxD){
+    x += sx; y += sy; d += 0.06;
+    if (solid(Math.floor(x), Math.floor(y))) break;
+  }
+  return d;
+}
+
+function visible(from, ang, range, fov, tx, ty){
+  var dx = tx - from.x, dy = ty - from.y;
+  var d = Math.sqrt(dx * dx + dy * dy);
+  if (d < AMBIENT) return true;
+  if (d > range) return false;
+  var a = Math.atan2(dy, dx) - ang;
+  while (a > Math.PI) a -= Math.PI * 2;
+  while (a < -Math.PI) a += Math.PI * 2;
+  if (Math.abs(a) > fov / 2) return false;
+  return castRay(from.x, from.y, Math.atan2(dy, dx), d) >= d - 0.12;
+}
+
+function draw(){
+  if (phase() !== 'play' && phase() !== 'result'){ return; }
+  var self = me();
+  if (!self){ return; }
+
+  /* local prediction keeps the stick feeling instant on a client */
+  if (!local || local.id !== self.i){ local = { id:self.i, x:self.x, y:self.y, dir:self.d }; }
+  if (!ME.isHost){
+    var mag = Math.sqrt(myInput.ax * myInput.ax + myInput.ay * myInput.ay);
+    if (mag > 0.08 && !self.e){
+      var ax = myInput.ax / Math.max(1, mag), ay = myInput.ay / Math.max(1, mag);
+      local.dir = Math.atan2(ay, ax);
+      var sp = (self.r === 'hunter' ? SPEED_HUN : SPEED_RUN) * (1 / 60);
+      moveWithWalls(local, ax * sp, ay * sp);
+    }
+    /* pull gently back to the host's opinion rather than snapping */
+    local.x += (self.x - local.x) * 0.22;
+    local.y += (self.y - local.y) * 0.22;
+  } else {
+    local.x = self.x; local.y = self.y; local.dir = self.d;
+  }
+
+  var eye = { x:local.x, y:local.y };
+  var ang = local.dir;
+  var isHunter = self.r === 'hunter';
+  var range = isHunter ? RANGE_HUN : RANGE_RUN;
+  var fov   = isHunter ? FOV_HUN : FOV_RUN;
+
+  /* one cell in pixels, sized so the torch always fits the screen */
+  var S = Math.min(VW, VH) / (range * 1.9);
+  var cxp = VW / 2, cyp = VH / 2;
+  function px(wx){ return cxp + (wx - eye.x) * S; }
+  function py(wy){ return cyp + (wy - eye.y) * S; }
+
+  ctx.clearRect(0, 0, VW, VH);
+  ctx.fillStyle = '#000';
+  ctx.fillRect(0, 0, VW, VH);
+
+  /* --- the lit region: torch wedge plus a small pool at your feet --- */
+  ctx.save();
+  ctx.beginPath();
+  var steps = 90, a0 = ang - fov / 2, step = fov / steps;
+  ctx.moveTo(px(eye.x), py(eye.y));
+  for (var i = 0; i <= steps; i++){
+    var a = a0 + step * i;
+    var d = castRay(eye.x, eye.y, a, range);
+    ctx.lineTo(px(eye.x + Math.cos(a) * d), py(eye.y + Math.sin(a) * d));
+  }
+  ctx.closePath();
+  ctx.moveTo(px(eye.x + AMBIENT), py(eye.y));
+  ctx.arc(px(eye.x), py(eye.y), AMBIENT * S, 0, Math.PI * 2);
+  ctx.clip();
+
+  drawWorld(px, py, S, eye, range);
+  ctx.restore();
+
+  /* --- torch falloff, so the far edge fades instead of ending --- */
+  var g = ctx.createRadialGradient(cxp, cyp, AMBIENT * S * 0.5, cxp, cyp, range * S);
+  g.addColorStop(0, 'rgba(0,0,0,0)');
+  g.addColorStop(0.62, 'rgba(0,0,0,0.25)');
+  g.addColorStop(1, 'rgba(0,0,0,0.92)');
+  ctx.fillStyle = g;
+  ctx.fillRect(0, 0, VW, VH);
+
+  /* --- other players, only if genuinely in your light --- */
+  var ps = players();
+  for (var j = 0; j < ps.length; j++){
+    var o = ps[j];
+    if (o.i === self.i || o.e) continue;
+    if (!visible(eye, ang, range, fov, o.x, o.y)) continue;
+    dot(px(o.x), py(o.y), S * 0.28, o.r === 'hunter' ? '#FF5B5B' : '#3ECF8E');
+    ctx.font = '600 11px "IBM Plex Mono", ui-monospace, monospace';
+    ctx.fillStyle = 'rgba(255,255,255,.75)';
+    ctx.textAlign = 'center';
+    ctx.fillText(o.n, px(o.x), py(o.y) - S * 0.45);
+  }
+
+  /* --- you --- */
+  dot(cxp, cyp, S * 0.28, isHunter ? '#FF5B5B' : '#FFFFFF');
+
+  /* --- a faint pointer to the exit, or runners simply wander --- */
+  if (!isHunter && !self.e) exitHint(eye, cxp, cyp);
+
+  drawHud(self);
+}
+
+function dot(x, y, r, col){
+  ctx.beginPath(); ctx.arc(x, y, r, 0, Math.PI * 2);
+  ctx.fillStyle = col; ctx.fill();
+  ctx.lineWidth = 2; ctx.strokeStyle = 'rgba(0,0,0,.55)'; ctx.stroke();
+}
+
+function drawWorld(px, py, S, eye, range){
+  var x0 = Math.max(0, Math.floor(eye.x - range - 1)), x1 = Math.min(MW - 1, Math.ceil(eye.x + range + 1));
+  var y0 = Math.max(0, Math.floor(eye.y - range - 1)), y1 = Math.min(MH - 1, Math.ceil(eye.y + range + 1));
+  for (var y = y0; y <= y1; y++){
+    for (var x = x0; x <= x1; x++){
+      var c = cell(x, y), X = px(x), Y = py(y);
+      if (c === '#'){
+        ctx.fillStyle = '#20263A';
+        ctx.fillRect(X, Y, S + 1, S + 1);
+        ctx.fillStyle = 'rgba(255,255,255,.055)';
+        ctx.fillRect(X, Y, S + 1, 2);
+      } else {
+        ctx.fillStyle = '#0C0F18';
+        ctx.fillRect(X, Y, S + 1, S + 1);
+        ctx.strokeStyle = 'rgba(255,255,255,.035)';
+        ctx.lineWidth = 1;
+        ctx.strokeRect(X + 0.5, Y + 0.5, S, S);
+      }
+      if (c === 'E'){
+        var pulse = 0.55 + 0.45 * Math.sin(Date.now() / 320);
+        ctx.fillStyle = 'rgba(62,207,142,' + (0.3 + 0.35 * pulse) + ')';
+        ctx.fillRect(X, Y, S + 1, S + 1);
+        ctx.strokeStyle = '#3ECF8E'; ctx.lineWidth = 2;
+        ctx.strokeRect(X + 2, Y + 2, S - 3, S - 3);
+      }
+    }
+  }
+}
+
+function exitHint(eye, cxp, cyp){
+  var a = Math.atan2(EXIT.y - eye.y, EXIT.x - eye.x);
+  var r = Math.min(VW, VH) * 0.42;
+  var x = cxp + Math.cos(a) * r, y = cyp + Math.sin(a) * r;
+  ctx.save();
+  ctx.translate(x, y); ctx.rotate(a);
+  ctx.beginPath(); ctx.moveTo(9, 0); ctx.lineTo(-6, 6); ctx.lineTo(-6, -6); ctx.closePath();
+  ctx.fillStyle = 'rgba(62,207,142,.4)'; ctx.fill();
+  ctx.restore();
+}
+
+function drawHud(self){
+  var ph = phase();
+  var r = $('hud-role');
+  if (self.e){ r.textContent = 'Out. You made it'; r.className = 'role runner'; }
+  else if (self.r === 'hunter'){ r.textContent = 'Hunter'; r.className = 'role hunter'; }
+  else { r.textContent = 'Runner'; r.className = 'role runner'; }
+
+  var round = (ME.isHost && room ? room.round : (view ? view.round : 0)) + 1;
+  var left  = ME.isHost && room
+    ? Math.max(0, room.endsAt - Date.now())
+    : (view ? view.left : 0);
+  $('hud-right').textContent = 'Round ' + round + ' of ' + ROUNDS + '   ' +
+    Math.ceil(left / 1000) + 's   ' + self.s + ' pts';
+
+  var big = ME.isHost && room ? room.resultBig : (view ? view.big : '');
+  var sml = ME.isHost && room ? room.resultSmall : (view ? view.small : '');
+  if (ph === 'result' && big){
+    $('toast-big').textContent = big;
+    $('toast-small').textContent = sml;
+    $('toast').classList.remove('hidden');
+  } else {
+    $('toast').classList.add('hidden');
+  }
+}
+
+function frame(){ try { draw(); } catch(e){} requestAnimationFrame(frame); }
+requestAnimationFrame(frame);
+
+/* ==========================================================================
+   INPUT
+   ========================================================================== */
+var keys = {};
+window.addEventListener('keydown', function(e){
+  keys[e.key.toLowerCase()] = true;
+  if (['arrowup','arrowdown','arrowleft','arrowright',' '].indexOf(e.key.toLowerCase()) >= 0) e.preventDefault();
+  readKeys();
+});
+window.addEventListener('keyup', function(e){ keys[e.key.toLowerCase()] = false; readKeys(); });
+
+function readKeys(){
+  var ax = 0, ay = 0;
+  if (keys['a'] || keys['arrowleft'])  ax -= 1;
+  if (keys['d'] || keys['arrowright']) ax += 1;
+  if (keys['w'] || keys['arrowup'])    ay -= 1;
+  if (keys['s'] || keys['arrowdown'])  ay += 1;
+  setInput(ax, ay);
+}
+
+var stick = $('stick'), knob = $('stickknob'), base = $('stickbase');
+var stickId = null, sx0 = 0, sy0 = 0;
+var STICK_R = 52;
+
+stick.addEventListener('touchstart', function(e){
+  var t = e.changedTouches[0];
+  stickId = t.identifier; sx0 = t.clientX; sy0 = t.clientY;
+  var rect = stick.getBoundingClientRect();
+  base.style.left = knob.style.left = (sx0 - rect.left) + 'px';
+  base.style.top  = knob.style.top  = (sy0 - rect.top) + 'px';
+  stick.classList.add('on');
+  e.preventDefault();
+}, { passive:false });
+
+stick.addEventListener('touchmove', function(e){
+  for (var i = 0; i < e.changedTouches.length; i++){
+    var t = e.changedTouches[i];
+    if (t.identifier !== stickId) continue;
+    var dx = t.clientX - sx0, dy = t.clientY - sy0;
+    var d = Math.sqrt(dx * dx + dy * dy);
+    var k = d > STICK_R ? STICK_R / d : 1;
+    var rect = stick.getBoundingClientRect();
+    knob.style.left = (sx0 - rect.left + dx * k) + 'px';
+    knob.style.top  = (sy0 - rect.top  + dy * k) + 'px';
+    setInput(dx / STICK_R, dy / STICK_R);
+  }
+  e.preventDefault();
+}, { passive:false });
+
+function endStick(e){
+  for (var i = 0; i < e.changedTouches.length; i++){
+    if (e.changedTouches[i].identifier === stickId){
+      stickId = null; stick.classList.remove('on'); setInput(0, 0);
+    }
+  }
+}
+stick.addEventListener('touchend', endStick);
+stick.addEventListener('touchcancel', endStick);
+
+function setInput(ax, ay){
+  var m = Math.sqrt(ax * ax + ay * ay);
+  if (m > 1){ ax /= m; ay /= m; }
+  myInput.ax = ax; myInput.ay = ay;
+  if (ME.isHost && room){
+    var h = pById('host');
+    if (h){ h.ax = ax; h.ay = ay; }
+  }
+}
+
+/* ==========================================================================
+   WIRING
+   ========================================================================== */
+$('btn-create').onclick = createRoom;
+$('btn-join').onclick   = joinRoom;
+$('btn-start').onclick  = function(){ if (ME.isHost && room) hostStart(); };
+$('btn-again').onclick  = function(){
+  if (ME.isHost && room) hostRestart();
+  else if (hostConn) hostConn.send({ t:'again' });
+};
+
+$('join-code').addEventListener('input', function(){
+  this.value = this.value.toUpperCase().replace(/[^A-Z]/g, '');
+});
+$('join-code').addEventListener('keydown', function(e){ if (e.key === 'Enter') joinRoom(); });
+
+$('lobby-code').addEventListener('click', function(){
+  var rc = this.textContent.trim();
+  if (rc === '----' || !navigator.clipboard) return;
+  navigator.clipboard.writeText(location.origin + location.pathname + '?room=' + rc)
+    .then(function(){
+      $('copy-hint').textContent = 'Join link copied';
+      setTimeout(function(){ $('copy-hint').textContent = 'Tap the code to copy the join link'; }, 1800);
+    }).catch(function(){});
+});
+
+(function(){
+  var m = location.search.match(/room=([A-Za-z]{4})/);
+  if (m){ $('join-code').value = m[1].toUpperCase(); $('join-name').focus(); }
+})();
+
+resize();
+</script>
+</body>
+</html>
