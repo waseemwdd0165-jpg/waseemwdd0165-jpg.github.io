@@ -61,20 +61,25 @@ export function leapsEarned(dist){ return Math.floor(Math.max(0, dist) / LEAP_EV
    The whole balance of the game. Too much and the drawer paves a motorway,
    too little and nobody gets anywhere.
    ------------------------------------------------------------------------ */
-export const INK_MAX     = 34;      /* metres of line you can hold */
-export const INK_REFILL  = 7.5;     /* metres a second */
+export const INK_MAX     = 40;      /* metres of line you can hold */
+export const INK_REFILL  = 8.5;     /* metres a second */
 export const MIN_SEG     = 0.10;
 export const MAX_SEG     = 3.0;
 
-/* You can only work near the runner, so the level cannot be pre built */
-export const REACH_BACK  = 6;
-export const REACH_FWD   = 22;
+/* You can only work near the runner, so the level cannot be pre built.
+   These were tighter. A drawer's instinct is to get well ahead, and the part
+   of the stroke past the limit was thrown away without a word, which looked
+   exactly like the line disappearing on its own. */
+export const REACH_BACK  = 8;
+export const REACH_FWD   = 26;
 export const REACH_UP    = 9;
 export const REACH_DOWN  = 7;
 
 /* How much chalk is sent to a browser. This has to be wider than any screen,
-   because a window narrower than the view made lines vanish at the edges. */
-export const SEND_BACK   = 34;
+   because a window narrower than the view made lines vanish at the edges, and
+   wide enough behind that a line you just drew is still there when you glance
+   back at it. */
+export const SEND_BACK   = 55;
 export const SEND_FWD    = 60;
 
 /* A room with a socket open still costs, whether or not anyone is playing,

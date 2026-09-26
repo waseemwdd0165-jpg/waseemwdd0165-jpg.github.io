@@ -32,7 +32,12 @@ catch(e){ console.log('THREW ON LOAD: ' + e.stack); process.exit(1); }
 const D = win.document, E = id => D.getElementById(id);
 await new Promise(r=>setTimeout(r,120));
 
-ok('the record list loaded', /312/.test(E('top-list').innerHTML), E('top-list').innerHTML.slice(0,80));
+ctx.sheet('top');
+await new Promise(r=>setTimeout(r,120));
+ok('the record list loads into its sheet', /312/.test(E('top-list').innerHTML), E('top-list').innerHTML.slice(0,80));
+ok('the sheet opens', !E('sheet').classList.contains('hidden'));
+ctx.sheet(null);
+ok('and closes again', E('sheet').classList.contains('hidden'));
 
 function base(o){
   return Object.assign({ t:'state', ph:'play', round:0, rounds:4, host:true, role:'drawer',
@@ -104,6 +109,16 @@ for (let i = 0; i + 3 < pts.length; i += 2){
   longest = Math.max(longest, Math.hypot(pts[i+2]-pts[i], pts[i+3]-pts[i+1]));
 }
 ok('a flicked finger is broken into short segments', pts.length > 4 && longest <= 3.0, longest);
+
+/* the vanishing line: a point the server would throw away must never be
+   drawn here either, or it appears for a moment and then goes */
+ctx.pending = [];
+ctx.penTo(5.5, 1.2);                     /* just ahead of a runner at x=5 */
+const near = ctx.pending.length;
+ctx.penTo(5 + 40, 1.2);                  /* far past the reach */
+ok('a point inside the reach is taken', near === 2, near);
+ok('a point outside it is refused', ctx.pending.length === 0, ctx.pending.length);
+ok('and the drawer is told why', performance.now() - ctx.nudgedAt < 1000);
 
 /* the canvas keeps the view inside the window the server sends */
 win.innerWidth = 1920; win.innerHeight = 1080;

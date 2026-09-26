@@ -22,13 +22,14 @@ const PAGE = `<!doctype html>
 
 <style>
 :root{
-  --board:#232E28; --board-2:#1B2420;
-  --chalk:#F4F3E9; --soft:rgba(244,243,233,.62); --dim:rgba(244,243,233,.40);
-  --line:rgba(244,243,233,.16);
-  --warn:#F0A65C; --bad:#E8776B; --good:#8FCB8B;
+  /* a school chalkboard, not a slate one */
+  --board:#2E5B49; --board-2:#264B3C; --board-3:#1E3C30;
+  --chalk:#F4F3E9; --soft:rgba(244,243,233,.66); --dim:rgba(244,243,233,.44);
+  --line:rgba(244,243,233,.18);
+  --warn:#F5B973; --bad:#E8776B; --good:#9FD79A;
 }
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
-html,body{height:100%;overflow:hidden;background:#151C19}
+html,body{height:100%;overflow:hidden;background:var(--board-3)}
 body{
   font:400 16px/1.5 "Inter",-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;
   color:var(--chalk);
@@ -39,60 +40,94 @@ body{
 .hand{font-family:"Caveat",cursive}
 .hidden{display:none!important}
 
-/* ---------- gate ---------- */
+/* ---------- gate ----------
+   One screen, no scrolling. The stage is a column that centres itself and the
+   only thing allowed to scroll is the panel in the middle, and then only on a
+   short phone at the end of a match. */
 #gate{
-  position:fixed;inset:0;z-index:40;overflow-y:auto;
+  position:fixed;inset:0;z-index:40;overflow:hidden;display:flex;
   background:
-    radial-gradient(1100px 620px at 50% -6%, rgba(244,243,233,.07), transparent 62%),
+    radial-gradient(1200px 700px at 50% -10%, rgba(244,243,233,.08), transparent 60%),
     linear-gradient(var(--board), var(--board-2));
 }
-#gate .wrap{min-height:100%;display:flex;align-items:center;justify-content:center;padding:26px 20px 40px}
-#gate .box{width:100%;max-width:400px}
-.brand{text-align:center;margin-bottom:6px}
+#gate .stage{
+  margin:auto;width:100%;max-width:420px;height:100%;
+  padding:18px 18px calc(14px + env(safe-area-inset-bottom));
+  display:flex;flex-direction:column;justify-content:center;
+}
+.brand{text-align:center;flex:0 0 auto}
 .brand h1{
   font-family:"Caveat",cursive;font-weight:700;
-  font-size:clamp(56px,16vw,92px);line-height:.9;letter-spacing:.01em;
+  font-size:clamp(40px,12.5vw,68px);line-height:.92;letter-spacing:.01em;
 }
 .brand .tag{
-  font-family:"Caveat",cursive;font-size:clamp(20px,5.5vw,28px);
-  color:var(--warn);line-height:1;margin-top:-2px;
+  font-family:"Caveat",cursive;font-size:clamp(18px,5vw,25px);
+  color:var(--warn);line-height:1;margin-top:1px;
 }
-.brand .say{color:var(--soft);font-size:15px;margin-top:12px;line-height:1.45}
-.brand .say b{color:var(--chalk);font-weight:600}
+.say{color:var(--soft);font-size:13.5px;line-height:1.45;text-align:center;
+     margin:10px 0 2px;flex:0 0 auto}
+.say b{color:var(--chalk);font-weight:600}
 
 /* the little looping demo, so you see the game before you read about it */
 #demo{
   position:static;display:block;
-  width:100%;height:132px;margin:18px 0 6px;border-radius:14px;
-  border:1px solid var(--line);background:rgba(0,0,0,.2);
+  width:100%;flex:0 1 120px;min-height:0;margin:12px 0 2px;border-radius:14px;
+  border:1px solid var(--line);background:rgba(0,0,0,.16);
 }
+@media (max-height:600px){ #demo{display:none} .say{display:none} }
 
+.panel{flex:0 1 auto;min-height:0;overflow-y:auto;margin-top:12px}
 .card{
-  background:rgba(0,0,0,.22);border:1px solid var(--line);
-  border-radius:16px;padding:16px;margin-top:12px;
+  background:rgba(0,0,0,.20);border:1px solid var(--line);
+  border-radius:16px;padding:14px;
 }
+.card + .card{margin-top:10px}
 .card h2{font-size:14px;font-weight:600;margin-bottom:3px}
-.card p{color:var(--soft);font-size:13px;margin-bottom:11px;line-height:1.45}
-label{display:block;font-size:11.5px;color:var(--dim);margin:0 0 5px 2px;
-      letter-spacing:.06em;text-transform:uppercase}
+.card p{color:var(--soft);font-size:13px;margin-bottom:10px;line-height:1.45}
 input[type=text]{
   width:100%;padding:12px 14px;border-radius:11px;font-size:15px;font-family:inherit;
-  background:rgba(0,0,0,.3);border:1px solid var(--line);color:var(--chalk);
+  background:rgba(0,0,0,.26);border:1px solid var(--line);color:var(--chalk);
 }
-input[type=text]:focus{outline:none;border-color:rgba(244,243,233,.5)}
-input.code{font:700 21px/1 "Inter",monospace;letter-spacing:.26em;text-transform:uppercase;text-align:center}
+input[type=text]::placeholder{color:rgba(244,243,233,.35)}
+input[type=text]:focus{outline:none;border-color:rgba(244,243,233,.52)}
+input.code{font:700 19px/1 "Inter",monospace;letter-spacing:.22em;text-transform:uppercase;text-align:center}
 button{
-  width:100%;font:600 15px inherit;cursor:pointer;border:0;border-radius:11px;padding:13px;
+  width:100%;font:600 15px inherit;cursor:pointer;border:0;border-radius:11px;padding:12px;
   background:var(--chalk);color:#1D2723;transition:transform .06s,opacity .15s;
 }
 button:active{transform:translateY(1px)}
 button:disabled{opacity:.45;cursor:not-allowed}
 button.ghost{background:transparent;border:1px solid var(--line);color:var(--chalk)}
-button.warm{background:var(--warn);color:#2A1B08}
-.row{margin-top:10px}
-.two{display:grid;grid-template-columns:1fr 1fr;gap:9px;margin-top:10px}
-.err{color:var(--bad);font-size:13px;margin-top:9px}
-.status{font-size:12px;color:var(--dim);text-align:center;margin-top:14px}
+.row{margin-top:9px}
+.two{display:grid;grid-template-columns:1fr 1fr;gap:9px;margin-top:9px}
+.joinrow{display:grid;grid-template-columns:1fr auto;gap:9px}
+.joinrow button{width:auto;padding:12px 20px}
+.err{color:var(--bad);font-size:13px;margin-top:8px}
+.status{font-size:12px;color:var(--dim);text-align:center;margin-top:10px;flex:0 0 auto}
+
+/* a hand drawn rule with a word sitting on it */
+.orline{display:flex;align-items:center;gap:10px;margin:13px 0 11px;
+        color:var(--dim);font-size:11px;letter-spacing:.12em;text-transform:uppercase}
+.orline:before,.orline:after{content:"";flex:1;height:1px;background:var(--line)}
+
+.links{display:flex;justify-content:center;gap:10px;align-items:center;
+       margin-top:12px;color:var(--dim);font-size:12.5px}
+button.link{width:auto;padding:2px 2px;background:none;color:var(--soft);
+            font:500 12.5px inherit;text-decoration:underline;text-underline-offset:3px}
+
+/* the two things that used to be cards below the fold */
+#sheet{
+  position:fixed;inset:0;z-index:50;display:flex;padding:18px;
+  background:rgba(14,30,24,.82);backdrop-filter:blur(5px);
+}
+#sheet .sheetbox{
+  margin:auto;width:100%;max-width:420px;max-height:88%;overflow-y:auto;
+  background:var(--board-2);border:1px solid var(--line);border-radius:18px;padding:18px;
+}
+#sheet h2{font-size:15px;margin-bottom:8px}
+#sheet p{color:var(--soft);font-size:13.5px;line-height:1.5}
+#sheet p + p{margin-top:10px}
+#sheet-x{margin-top:14px}
 
 /* ---------- lobby, board, results ---------- */
 .roomcode{font:700 40px/1 "Inter",monospace;letter-spacing:.22em;text-align:center;padding:10px 0 4px}
@@ -184,90 +219,90 @@ ul.list li:first-child{border-top:0}
 <canvas id="cv"></canvas>
 
 <div id="gate">
- <div class="wrap">
-  <div class="box">
+ <div class="stage">
     <div class="brand">
       <h1 class="hand">Chalk Runner</h1>
       <div class="tag hand">One step ahead</div>
-      <canvas id="demo"></canvas>
-      <p class="say">One of you <b>draws</b>. The other <b>runs</b> on it.
-      The runner never stops, and there is no ground until somebody makes some.</p>
+    </div>
+    <canvas id="demo"></canvas>
+    <p class="say">One of you <b>draws</b>. The other <b>runs</b> on it.
+    The runner never stops, and there is no ground until somebody makes some.</p>
+
+    <div class="panel">
+      <section id="s-landing">
+        <div class="card">
+          <input type="text" id="host-name" maxlength="12" placeholder="Your name"
+                 autocomplete="off" spellcheck="false">
+          <div class="two">
+            <button id="btn-create">Start a board</button>
+            <button class="ghost" id="btn-solo">Practise alone</button>
+          </div>
+          <div class="orline">or join a friend</div>
+          <div class="joinrow">
+            <input type="text" id="join-code" class="code" maxlength="4" placeholder="CODE"
+                   autocomplete="off" spellcheck="false">
+            <button class="ghost" id="btn-join">Join</button>
+          </div>
+          <div class="err hidden" id="join-err"></div>
+        </div>
+        <div class="links">
+          <button class="link" id="btn-how">How to play</button>
+          <span>&middot;</span>
+          <button class="link" id="btn-top">Furthest runs</button>
+        </div>
+      </section>
+
+      <section id="s-lobby" class="hidden">
+        <div class="card">
+          <h2 style="text-align:center">Board code</h2>
+          <div class="roomcode" id="lobby-code">----</div>
+          <p style="text-align:center;margin-bottom:6px" id="copy-hint">Tap the code to copy the join link</p>
+          <ul class="list" id="lobby-players"></ul>
+          <div id="host-controls">
+            <div class="row"><button id="btn-start" disabled>Start</button></div>
+            <div class="row"><button class="ghost" id="btn-solo2">Practise alone instead</button></div>
+          </div>
+          <div class="status hidden" id="lobby-wait">Waiting for the host</div>
+        </div>
+      </section>
+
+      <section id="s-over" class="hidden">
+        <div class="card">
+          <h2>Final</h2>
+          <p id="over-sub"></p>
+          <div class="record" id="over-record"></div>
+          <ul class="list" id="over-list"></ul>
+          <div class="row" id="over-controls"><button id="btn-again">Play again</button></div>
+          <div class="status hidden" id="over-wait">Waiting for the host</div>
+        </div>
+        <div class="card">
+          <h2>Furthest runs</h2>
+          <ul class="list" id="top-list-2"></ul>
+        </div>
+      </section>
     </div>
 
-    <section id="s-landing">
-      <div class="card">
-        <label for="host-name">Your name</label>
-        <input type="text" id="host-name" maxlength="12" placeholder="Your name"
-               autocomplete="off" spellcheck="false">
-        <div class="two">
-          <button id="btn-create">Start a board</button>
-          <button class="ghost" id="btn-solo">Practise alone</button>
-        </div>
-      </div>
-
-      <div class="card">
-        <h2>Join a friend</h2>
-        <label for="join-name">Your name</label>
-        <input type="text" id="join-name" maxlength="12" placeholder="Your name"
-               autocomplete="off" spellcheck="false">
-        <label for="join-code" style="margin-top:10px">Board code</label>
-        <input type="text" id="join-code" class="code" maxlength="4" placeholder="ABCD"
-               autocomplete="off" spellcheck="false">
-        <div class="row"><button class="ghost" id="btn-join">Join board</button></div>
-        <div class="err hidden" id="join-err"></div>
-      </div>
-
-      <div class="card">
-        <h2>How it goes</h2>
-        <p style="margin:0">
-          Drag anywhere to lay chalk and it becomes real ground. You can only draw
-          near the runner and the chalk runs out, so you are always one line behind.
-          Every 50 metres they speed up. Every 100 they bank a leap, a huge floating
-          jump that buys you a breath. Four rounds, roles swap, the score is metres.
-        </p>
-        <p style="margin:11px 0 0">
-          The record is drawn on the board as a red line out ahead of you. Run past it.
-        </p>
-      </div>
-
-      <div class="card">
-        <h2>Furthest runs</h2>
-        <ul class="list" id="top-list"><li><span class="tag2">loading</span></li></ul>
-      </div>
-    </section>
-
-    <section id="s-lobby" class="hidden">
-      <div class="card">
-        <h2 style="text-align:center">Board code</h2>
-        <div class="roomcode" id="lobby-code">----</div>
-        <p style="text-align:center;margin-bottom:6px" id="copy-hint">Tap the code to copy the join link</p>
-        <ul class="list" id="lobby-players"></ul>
-        <div id="host-controls">
-          <div class="row"><button id="btn-start" disabled>Start</button></div>
-          <div class="row"><button class="ghost" id="btn-solo2">Practise alone instead</button></div>
-        </div>
-        <div class="status hidden" id="lobby-wait">Waiting for the host</div>
-      </div>
-    </section>
-
-    <section id="s-over" class="hidden">
-      <div class="card">
-        <h2>Final</h2>
-        <p id="over-sub"></p>
-        <div class="record" id="over-record"></div>
-        <ul class="list" id="over-list"></ul>
-        <div class="row" id="over-controls"><button id="btn-again">Play again</button></div>
-        <div class="status hidden" id="over-wait">Waiting for the host</div>
-      </div>
-      <div class="card">
-        <h2>Furthest runs</h2>
-        <ul class="list" id="top-list-2"></ul>
-      </div>
-    </section>
-
     <div class="status" id="conn"></div>
-  </div>
  </div>
+</div>
+
+<div id="sheet" class="hidden">
+  <div class="sheetbox">
+    <div id="sheet-how" class="hidden">
+      <h2>How to play</h2>
+      <p>Drag anywhere to lay chalk and it becomes real ground. You can only draw
+      near the runner and the chalk runs out, so you are always one line behind.</p>
+      <p>Every 50 metres the runner speeds up. Every 100 they bank a leap, a huge
+      floating jump that buys the drawer a breath. Four rounds, roles swap, the
+      score is metres.</p>
+      <p>The record stands on the board as a red line out ahead of you. Run past it.</p>
+    </div>
+    <div id="sheet-top" class="hidden">
+      <h2>Furthest runs</h2>
+      <ul class="list" id="top-list"><li><span class="tag2">loading</span></li></ul>
+    </div>
+    <button class="ghost" id="sheet-x">Close</button>
+  </div>
 </div>
 
 <div id="audiobar">
@@ -308,10 +343,14 @@ ul.list li:first-child{border-top:0}
    ========================================================================== */
 
 var RUNNER_R = 0.36, START_X = 2, LEDGE_END = 13;
-var REACH_BACK = 6, REACH_FWD = 22, REACH_UP = 9, REACH_DOWN = 7;
+var REACH_BACK = 8, REACH_FWD = 26, REACH_UP = 9, REACH_DOWN = 7;
 var SPEED_EVERY = 50;
 /* the server sends chalk within this window, so the view must never be wider */
-var SEND_BACK = 34, SEND_FWD = 60;
+var SEND_BACK = 55, SEND_FWD = 60;
+/* how long a line drawn here is kept before the server's copy is the only one
+   left. It used to be 700ms, which was long enough for the round trip and not
+   long enough to look like anything but a line vanishing. */
+var LOCAL_SOLID = 1200, LOCAL_FADE = 900;
 
 var $ = function(id){ return document.getElementById(id); };
 var esc = function(s){ return String(s).replace(/[&<>"]/g, function(c){
@@ -760,15 +799,17 @@ for (var i = 0; i < 80; i++){
 }
 
 function paintBoard(c, w, h){
-  c.fillStyle = '#232E28'; c.fillRect(0, 0, w, h);
+  c.fillStyle = '#2E5B49'; c.fillRect(0, 0, w, h);
+  /* smears of old chalk, which is most of what a school board looks like */
   for (var i = 0; i < dust.length; i++){
     var d = dust[i];
     c.fillStyle = 'rgba(244,243,233,' + d.a + ')';
     c.beginPath(); c.arc(d.x * w, d.y * h, d.r * 11, 0, Math.PI * 2); c.fill();
   }
   var g = c.createLinearGradient(0, 0, 0, h);
-  g.addColorStop(0, 'rgba(255,255,255,.035)');
-  g.addColorStop(1, 'rgba(0,0,0,.14)');
+  g.addColorStop(0, 'rgba(255,255,255,.045)');
+  g.addColorStop(0.55, 'rgba(0,0,0,.04)');
+  g.addColorStop(1, 'rgba(0,0,0,.20)');
   c.fillStyle = g; c.fillRect(0, 0, w, h);
 }
 
@@ -815,15 +856,26 @@ function chalkPath(segs, X, Y){
    out, because a backgrounded tab stops drawing frames but keeps drawing chalk,
    and the list grew into the thousands during a live test. */
 function pruneLocal(now){
-  while (localSegs.length && now - localSegs[0].at > 700) localSegs.shift();
-  if (localSegs.length > 900) localSegs.splice(0, localSegs.length - 900);
+  var life = LOCAL_SOLID + LOCAL_FADE;
+  while (localSegs.length && now - localSegs[0].at > life) localSegs.shift();
+  if (localSegs.length > 1400) localSegs.splice(0, localSegs.length - 1400);
 }
+/* Everything the board should show right now, split into the lines that are
+   certain and the ones that are on their way out. */
 function liveSegs(){
   var now = performance.now();
   pruneLocal(now);
-  var out = (view && view.s) ? view.s.slice() : [];
-  for (var i = 0; i < localSegs.length; i++) out.push(localSegs[i].s);
-  return out;
+  var solid = (view && view.s) ? view.s.slice() : [];
+  var going = [], dim = 0;
+  for (var i = 0; i < localSegs.length; i++){
+    var age = now - localSegs[i].at;
+    if (age <= LOCAL_SOLID) solid.push(localSegs[i].s);
+    else {
+      going.push(localSegs[i].s);
+      dim = Math.max(dim, 1 - (age - LOCAL_SOLID) / LOCAL_FADE);
+    }
+  }
+  return { solid: solid, going: going, dim: Math.max(0, Math.min(1, dim)) };
 }
 
 function frame(){
@@ -855,12 +907,19 @@ function frame(){
   paintBoard(ctx, VW, VH);
   drawMilestones(r);
   if (role === 'drawer') drawReach(r);
-  strokeChalk(ctx, chalkPath(liveSegs(), sx, sy), 11, 4.5);
+  var live = liveSegs();
+  strokeChalk(ctx, chalkPath(live.solid, sx, sy), 11, 4.5);
+  if (live.going.length){
+    ctx.save();
+    ctx.globalAlpha = live.dim;
+    strokeChalk(ctx, chalkPath(live.going, sx, sy), 11, 4.5);
+    ctx.restore();
+  }
   if (role === 'drawer' && pending.length >= 4){
-    var live = [];
-    for (var i = 0; i + 3 < pending.length; i += 2) live.push([pending[i], pending[i+1], pending[i+2], pending[i+3]]);
-    ctx.save(); ctx.globalAlpha = 0.6;
-    strokeChalk(ctx, chalkPath(live, sx, sy), 10, 4);
+    var wet = [];
+    for (var i = 0; i + 3 < pending.length; i += 2) wet.push([pending[i], pending[i+1], pending[i+2], pending[i+3]]);
+    ctx.save(); ctx.globalAlpha = 0.7;
+    strokeChalk(ctx, chalkPath(wet, sx, sy), 10, 4);
     ctx.restore();
   }
   drawRunner(r, smooth);
@@ -881,13 +940,13 @@ function drawMilestones(r){
     var X = sx(START_X + d);
     if (X < -40 || X > VW + 40) continue;
     var passed = r.d >= d;
-    ctx.strokeStyle = passed ? 'rgba(240,166,92,.28)' : 'rgba(244,243,233,.14)';
+    ctx.strokeStyle = passed ? 'rgba(245,185,115,.30)' : 'rgba(244,243,233,.16)';
     ctx.lineWidth = 2;
     ctx.setLineDash([5, 8]);
     ctx.beginPath(); ctx.moveTo(X, 0); ctx.lineTo(X, VH); ctx.stroke();
     ctx.setLineDash([]);
     ctx.font = '700 21px "Caveat", cursive';
-    ctx.fillStyle = passed ? 'rgba(240,166,92,.8)' : 'rgba(244,243,233,.45)';
+    ctx.fillStyle = passed ? 'rgba(245,185,115,.85)' : 'rgba(244,243,233,.48)';
     ctx.textAlign = 'center';
     ctx.fillText(d + ' m', X, VH * 0.15);
   }
@@ -908,14 +967,23 @@ function drawMilestones(r){
   ctx.restore();
 }
 
+/* The drawer needs to see where the chalk works. When this was almost
+   invisible people drew past the edge and watched the line disappear. */
+var nudgedAt = 0;
 function drawReach(r){
   var x0 = sx(r.x - REACH_BACK), x1 = sx(r.x + REACH_FWD);
   var y0 = sy(r.y + REACH_UP),   y1 = sy(r.y - REACH_DOWN);
+  var hot = performance.now() - nudgedAt < 700;
   ctx.save();
-  ctx.setLineDash([6, 9]);
-  ctx.strokeStyle = 'rgba(244,243,233,.15)';
-  ctx.lineWidth = 1.5;
+  ctx.setLineDash([7, 8]);
+  ctx.strokeStyle = hot ? 'rgba(245,185,115,.75)' : 'rgba(244,243,233,.26)';
+  ctx.lineWidth = hot ? 2.5 : 1.6;
   ctx.strokeRect(x0, y0, x1 - x0, y1 - y0);
+  ctx.setLineDash([]);
+  ctx.font = '700 17px "Caveat", cursive';
+  ctx.fillStyle = hot ? 'rgba(245,185,115,.95)' : 'rgba(244,243,233,.40)';
+  ctx.textAlign = 'right';
+  ctx.fillText(hot ? 'too far, draw inside' : 'chalk works in here', x1 - 8, y0 - 8);
   ctx.restore();
 }
 
@@ -980,7 +1048,7 @@ requestAnimationFrame(frame);
     var t = (performance.now() - born) / 1000 + 1.4;
     var loop = 5.0, u = (t % loop) / loop;
 
-    g.fillStyle = '#1E2823'; g.fillRect(0, 0, W, H);
+    g.fillStyle = '#28503F'; g.fillRect(0, 0, W, H);
     var groundY = function(x){ return H * 0.70 + Math.sin(x * 0.028 + 1.2) * H * 0.10; };
     var drawnTo = u * (W + 60);
 
@@ -992,7 +1060,7 @@ requestAnimationFrame(frame);
     g.strokeStyle = 'rgba(244,243,233,.9)';  g.lineWidth = 3; g.stroke(p);
 
     /* the chalk tip, always just ahead */
-    g.fillStyle = 'rgba(240,166,92,.9)';
+    g.fillStyle = 'rgba(245,185,115,.95)';
     g.beginPath(); g.arc(drawnTo, groundY(drawnTo), 3.4, 0, Math.PI * 2); g.fill();
 
     /* the runner, always just behind it */
@@ -1050,7 +1118,23 @@ cv.addEventListener('pointerdown', function(e){
    throws away any segment longer than three metres, which used to leave holes
    in the ground exactly where somebody was drawing in a hurry. So the gap gets
    filled in here before it is sent. */
+/* A point the server is going to throw away should never be drawn here either,
+   or the line appears and then goes. The back edge is pulled in by a metre and
+   a half because the runner keeps moving while the message is in flight. */
+function inReach(x, y){
+  var r = view && view.r;
+  if (!r) return true;
+  if (x < r.x - REACH_BACK + 1.5 || x > r.x + REACH_FWD - 0.5) return false;
+  if (y < r.y - REACH_DOWN + 0.5 || y > r.y + REACH_UP - 0.5) return false;
+  return true;
+}
 function penTo(x, y){
+  if (!inReach(x, y)){
+    nudgedAt = performance.now();
+    if (pending.length >= 4) flush(true);
+    pending = [];
+    return;
+  }
   var n = pending.length;
   if (n >= 2){
     var px = pending[n-2], py = pending[n-1];
@@ -1106,8 +1190,21 @@ $('btn-join').onclick = function(){
   var rc = ($('join-code').value || '').trim().toUpperCase();
   if (rc.length !== 4){ joinErr('The board code is four letters.'); return; }
   joinErr(''); audio();
-  connect(rc, ($('join-name').value || 'Player').trim().slice(0,12) || 'Player', false, false);
+  connect(rc, ($('host-name').value || 'Player').trim().slice(0,12) || 'Player', false, false);
 };
+
+/* the two things that used to sit below the fold */
+function sheet(which){
+  $('sheet-how').classList.toggle('hidden', which !== 'how');
+  $('sheet-top').classList.toggle('hidden', which !== 'top');
+  $('sheet').classList.toggle('hidden', !which);
+  if (which === 'top') loadTop('top-list');
+}
+$('btn-how').onclick = function(){ sheet('how'); };
+$('btn-top').onclick = function(){ sheet('top'); };
+$('sheet-x').onclick = function(){ sheet(null); };
+$('sheet').addEventListener('click', function(e){ if (e.target === this) sheet(null); });
+addEventListener('keydown', function(e){ if (e.key === 'Escape') sheet(null); });
 $('btn-start').onclick = function(){ if (ws && ws.readyState === 1) ws.send(JSON.stringify({ t:'start' })); };
 $('btn-again').onclick = function(){ if (ws && ws.readyState === 1) ws.send(JSON.stringify({ t:'again' })); };
 
@@ -1127,7 +1224,7 @@ $('lobby-code').addEventListener('click', function(){
 });
 
 var pre = location.search.match(/room=([A-Za-z]{4})/);
-if (pre){ $('join-code').value = pre[1].toUpperCase(); $('join-name').focus(); }
+if (pre){ $('join-code').value = pre[1].toUpperCase(); $('host-name').focus(); }
 </script>
 </body>
 </html>
@@ -1196,20 +1293,25 @@ export function leapsEarned(dist){ return Math.floor(Math.max(0, dist) / LEAP_EV
    The whole balance of the game. Too much and the drawer paves a motorway,
    too little and nobody gets anywhere.
    ------------------------------------------------------------------------ */
-export const INK_MAX     = 34;      /* metres of line you can hold */
-export const INK_REFILL  = 7.5;     /* metres a second */
+export const INK_MAX     = 40;      /* metres of line you can hold */
+export const INK_REFILL  = 8.5;     /* metres a second */
 export const MIN_SEG     = 0.10;
 export const MAX_SEG     = 3.0;
 
-/* You can only work near the runner, so the level cannot be pre built */
-export const REACH_BACK  = 6;
-export const REACH_FWD   = 22;
+/* You can only work near the runner, so the level cannot be pre built.
+   These were tighter. A drawer's instinct is to get well ahead, and the part
+   of the stroke past the limit was thrown away without a word, which looked
+   exactly like the line disappearing on its own. */
+export const REACH_BACK  = 8;
+export const REACH_FWD   = 26;
 export const REACH_UP    = 9;
 export const REACH_DOWN  = 7;
 
 /* How much chalk is sent to a browser. This has to be wider than any screen,
-   because a window narrower than the view made lines vanish at the edges. */
-export const SEND_BACK   = 34;
+   because a window narrower than the view made lines vanish at the edges, and
+   wide enough behind that a line you just drew is still there when you glance
+   back at it. */
+export const SEND_BACK   = 55;
 export const SEND_FWD    = 60;
 
 /* A room with a socket open still costs, whether or not anyone is playing,
