@@ -33,7 +33,9 @@ body{
   font:400 16px/1.5 "Inter",-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;
   color:var(--chalk);
 }
-canvas{position:fixed;inset:0;width:100%;height:100%;display:block;touch-action:none}
+/* only the game board is the fullscreen one. The demo canvas on the gate is
+   an ordinary element, and styling every canvas here threw it across the page. */
+#cv{position:fixed;inset:0;width:100%;height:100%;display:block;touch-action:none}
 .hand{font-family:"Caveat",cursive}
 .hidden{display:none!important}
 
@@ -60,8 +62,9 @@ canvas{position:fixed;inset:0;width:100%;height:100%;display:block;touch-action:
 
 /* the little looping demo, so you see the game before you read about it */
 #demo{
+  position:static;display:block;
   width:100%;height:132px;margin:18px 0 6px;border-radius:14px;
-  border:1px solid var(--line);background:rgba(0,0,0,.2);display:block;
+  border:1px solid var(--line);background:rgba(0,0,0,.2);
 }
 
 .card{
