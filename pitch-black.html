@@ -333,6 +333,23 @@ function envReady(){
   return true;
 }
 
+/* Two devices can usually find each other with STUN alone, but plenty of
+   mobile and office networks refuse to let them talk directly. Without a
+   relay to fall back on the connection simply never completes, which looks
+   exactly like a dead button. TURN is that fallback. */
+var ICE = {
+  iceServers: [
+    { urls: 'stun:stun.l.google.com:19302' },
+    { urls: 'stun:stun1.l.google.com:19302' },
+    { urls: 'stun:stun.cloudflare.com:3478' },
+    { urls: [ 'turn:openrelay.metered.ca:80',
+              'turn:openrelay.metered.ca:443',
+              'turn:openrelay.metered.ca:443?transport=tcp' ],
+      username: 'openrelayproject', credential: 'openrelayproject' }
+  ]
+};
+function peerOpts(id){ return { debug:0, config: ICE }; }
+
 /* ---------- state -------------------------------------------------------- */
 var ME = { name:'', isHost:false, id:null };
 var peer = null, conns = [], hostConn = null;
@@ -353,7 +370,7 @@ function createRoom(){
   status('Opening room...');
   busy($('btn-create'), 'Opening room...');
 
-  peer = new Peer('pb-' + rc, { debug:0 });
+  peer = new Peer('pb-' + rc, peerOpts());
   var opened = false;
   setTimeout(function(){
     if (!opened){
@@ -609,19 +626,32 @@ function joinRoom(){
   /* A button that does nothing looks broken even when it is only waiting, so
      say so immediately and give up out loud rather than hanging for ever. */
   var joined = false;
+  /* Two very different things can go wrong, and they need different advice,
+     so track how far we actually got rather than reporting one vague error. */
+  var stage = 'signalling';
   busy($('btn-join'), 'Connecting to ' + rc + '...');
   var giveUp = setTimeout(function(){
     if (joined) return;
     try { if (peer) peer.destroy(); } catch(_){}
     peer = null; hostConn = null;
     free($('btn-join'), 'Join room');
-    joinFailed('No answer from room ' + rc + '. The host needs the page still ' +
-               'open on their device, and the code has to be from this session. ' +
-               'If it is, your network may be blocking the connection.');
-  }, 12000);
+    if (stage === 'signalling'){
+      joinFailed('This device could not reach the matchmaking server, so it never ' +
+                 'got as far as looking for room ' + rc + '. Some mobile networks ' +
+                 'and company WiFi block it. Try a different network, or mobile data ' +
+                 'if you are on WiFi. [stage: signalling]');
+    } else {
+      joinFailed('Found the server but could not open a line to the host. That ' +
+                 'happens when two networks will not let devices talk directly. ' +
+                 'Putting both devices on the same WiFi usually fixes it. ' +
+                 '[stage: peer link]');
+    }
+  }, 15000);
 
-  peer = new Peer(null, { debug:0 });
+  peer = new Peer(null, peerOpts());
   peer.on('open', function(){
+    stage = 'peer link';
+    busy($('btn-join'), 'Found the server, calling ' + rc + '...');
     hostConn = peer.connect('pb-' + rc, { reliable:false });
     hostConn.on('open', function(){
       joined = true;
@@ -647,7 +677,7 @@ function joinRoom(){
     joinFailed(String(e.type) === 'peer-unavailable'
       ? 'No room called ' + rc + ' is open. Check the letters, and check the host ' +
         'still has their page open, because closing it ends the room.'
-      : 'Connection problem: ' + e.type);
+      : 'Connection problem: ' + e.type + ' [stage: ' + stage + ']');
   });
 }
 
