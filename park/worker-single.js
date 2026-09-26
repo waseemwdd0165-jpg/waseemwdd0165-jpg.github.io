@@ -287,13 +287,18 @@ function buildGround(){
       else col = '#5C8C46';
       g.fillStyle = col;
       g.fillRect(x*S, y*S, S, S);
-      /* a bit of noise so grass is not a flat slab */
-      if (col === '#5C8C46'){
-        g.fillStyle = 'rgba(0,0,0,' + (0.03 + ((x*7+y*13)%5)*0.012) + ')';
-        g.fillRect(x*S, y*S, S, S);
-      }
     }
   }
+  /* Speckle at the pixel level rather than per tile. Tinting whole tiles
+     made the lawn read as a chessboard, which is the one thing grass is not. */
+  var img = g.getImageData(0, 0, c.width, c.height);
+  var d = img.data;
+  for (var i = 0; i < d.length; i += 4){
+    var n = (Math.random() - 0.5) * 16;
+    d[i] += n; d[i+1] += n; d[i+2] += n;
+  }
+  g.putImageData(img, 0, 0);
+
   var tex = new THREE.CanvasTexture(c);
   tex.magFilter = THREE.LinearFilter;
   var mesh = new THREE.Mesh(
@@ -356,19 +361,24 @@ function buildFence(){
 function buildBuildings(){
   /* the X blocks around each ride become low sheds, so the rides sit in a
      yard rather than floating on grass */
-  var mat = new THREE.MeshLambertMaterial({ color: 0x9A7C5B });
-  var seen = {};
-  for (var y = 0; y < MH; y++){
-    for (var x = 0; x < MW; x++){
-      if (MAP[y][x] !== 'X') continue;
-      var key = x + ',' + y;
-      if (seen[key]) continue;
-      seen[key] = 1;
-      var m = new THREE.Mesh(new THREE.BoxGeometry(1, 0.9, 1), mat);
-      m.position.set(x+0.5, 0.45, y+0.5);
-      scene.add(m);
-    }
+  /* One instanced mesh rather than a hundred and fifty separate boxes, so a
+     phone is not asked for a draw call per paving slab. */
+  var spots = [];
+  for (var y = 0; y < MH; y++)
+    for (var x = 0; x < MW; x++)
+      if (MAP[y][x] === 'X') spots.push([x+0.5, y+0.5]);
+
+  var mesh = new THREE.InstancedMesh(
+    new THREE.BoxGeometry(1, 0.9, 1),
+    new THREE.MeshLambertMaterial({ color: 0x9A7C5B }),
+    spots.length
+  );
+  var m4 = new THREE.Matrix4();
+  for (var i = 0; i < spots.length; i++){
+    m4.makeTranslation(spots[i][0], 0.45, spots[i][1]);
+    mesh.setMatrixAt(i, m4);
   }
+  scene.add(mesh);
 }
 
 function buildWheel(){
