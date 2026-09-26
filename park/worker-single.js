@@ -18,7 +18,7 @@ const PAGE = `<!doctype html>
 
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Silkscreen:wght@400;700&family=VT323&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Pixelify+Sans:wght@400;600;700&family=VT323&display=swap" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 
 <style>
@@ -40,7 +40,7 @@ body{
 }
 canvas{display:block;image-rendering:pixelated}
 
-.px{ font-family:"Silkscreen", "VT323", monospace; letter-spacing:.02em; }
+.px{ font-family:"Pixelify Sans", "VT323", monospace; letter-spacing:.02em; }
 .shadow{ text-shadow:2px 2px 0 var(--shade); }
 
 /* the classic chunky bevelled slab */
@@ -86,7 +86,7 @@ canvas{display:block;image-rendering:pixelated}
   padding:28px 22px 24px;
 }
 #gate h1{
-  font:400 clamp(20px,5.4vw,30px)/1.3 "Silkscreen", monospace;
+  font:700 clamp(26px,6.6vw,40px)/1.2 "Pixelify Sans", monospace;
   margin-bottom:10px;text-shadow:3px 3px 0 #2A2A2A;
 }
 #gate h1 span{ color:var(--gold) }
@@ -100,7 +100,7 @@ canvas{display:block;image-rendering:pixelated}
 #gate input:focus{ outline:2px solid var(--gold);outline-offset:1px }
 #gate button{
   width:100%;margin-top:14px;padding:15px;cursor:pointer;
-  font:400 17px "Silkscreen", monospace;text-shadow:2px 2px 0 #2F2F2F;
+  font:700 21px "Pixelify Sans", monospace;text-shadow:2px 2px 0 #2F2F2F;
 }
 #gate button:disabled{ opacity:.55;cursor:not-allowed }
 #gate .err{ color:#FF6B6B;font-size:20px;margin-top:12px;min-height:24px }
@@ -121,12 +121,12 @@ canvas{display:block;image-rendering:pixelated}
   padding:7px 12px;font-size:21px;line-height:1.1;margin-bottom:6px;
 }
 .chip b{ color:var(--gold);font-weight:400 }
-#who{ font-family:"Silkscreen",monospace;font-size:13px;padding:9px 12px }
+#who{ font-family:"Pixelify Sans",monospace;font-weight:700;font-size:18px;padding:8px 12px }
 #board{ font-size:20px;line-height:1.35;min-width:172px }
 #board .row{ display:flex;justify-content:space-between;gap:14px }
 #board .me{ color:var(--gold) }
 #board .hd{
-  font:400 10px "Silkscreen",monospace;color:#9A9A9A;
+  font:700 13px "Pixelify Sans",monospace;color:#9A9A9A;letter-spacing:.06em;
   margin-bottom:6px;padding-bottom:6px;border-bottom:2px solid #3A3A3A;
 }
 
@@ -141,7 +141,7 @@ canvas{display:block;image-rendering:pixelated}
 
 #toast{
   position:fixed;left:50%;top:20%;transform:translateX(-50%);z-index:25;
-  font:400 clamp(14px,3.4vw,20px)/1.5 "Silkscreen",monospace;
+  font:700 clamp(19px,4.4vw,27px)/1.4 "Pixelify Sans",monospace;
   text-shadow:3px 3px 0 #1A1A1A;display:none;pointer-events:none;text-align:center;
 }
 
@@ -166,7 +166,7 @@ canvas{display:block;image-rendering:pixelated}
 }
 .btn{
   pointer-events:auto;cursor:pointer;
-  font:400 12px "Silkscreen",monospace;text-shadow:2px 2px 0 #2F2F2F;
+  font:700 17px "Pixelify Sans",monospace;text-shadow:2px 2px 0 #2F2F2F;
   padding:14px 16px;min-width:74px;
 }
 .btn.go{ background:#4C9B31;border-top-color:#77C457;border-left-color:#77C457;
@@ -197,7 +197,7 @@ canvas{display:block;image-rendering:pixelated}
 #gallery .sky{position:absolute;inset:0;overflow:hidden}
 #gallery .hdr{
   position:absolute;top:0;left:0;right:0;padding:16px;display:flex;
-  justify-content:space-between;font:400 14px "Silkscreen",monospace;
+  justify-content:space-between;font:700 19px "Pixelify Sans",monospace;
   text-shadow:2px 2px 0 #2A2A2A;
 }
 .balloon{
@@ -220,11 +220,11 @@ canvas{display:block;image-rendering:pixelated}
   border-top:4px solid #6E6E6E;border-left:4px solid #6E6E6E;
   border-bottom:4px solid #1C1C1C;border-right:4px solid #1C1C1C;
 }
-#gallery .done h2{ font:400 22px "Silkscreen",monospace;margin-bottom:10px;text-shadow:3px 3px 0 #2A2A2A }
+#gallery .done h2{ font:700 29px "Pixelify Sans",monospace;margin-bottom:10px;text-shadow:3px 3px 0 #2A2A2A }
 #gallery .done p{ color:#CFCFCF;font-size:21px;margin-bottom:18px }
 
 @media(min-width:860px){ #stick{display:none} }
-@media(max-width:520px){ .btn{min-width:62px;padding:13px 10px;font-size:10px} }
+@media(max-width:520px){ .btn{min-width:66px;padding:13px 10px;font-size:14px} }
 </style>
 
 </head>
@@ -781,7 +781,7 @@ function makeLabel(text){
   var c = document.createElement('canvas');
   c.width = 256; c.height = 64;
   var x = c.getContext('2d');
-  x.font = 'bold 26px "Silkscreen", monospace';
+  x.font = 'bold 32px "Pixelify Sans", monospace';
   x.textAlign = 'center'; x.textBaseline = 'middle';
   x.lineJoin = 'round';
   x.lineWidth = 7; x.strokeStyle = 'rgba(0,0,0,.72)';
@@ -1207,10 +1207,12 @@ function readKeys(){
   if (keys['s'] || keys['arrowdown'])  f -= 1;
   if (keys['a'] || keys['arrowleft'])  s -= 1;
   if (keys['d'] || keys['arrowright']) s += 1;
-  /* movement is relative to where the camera is looking */
+  /* Movement is relative to where the camera is looking. The camera sits
+     behind you, so its right hand side is minus fz, plus fx. Getting that
+     backwards made D walk you to the left of the screen. */
   var fx = Math.sin(camYaw), fz = Math.cos(camYaw);
-  var ax = fx * f + fz * s;
-  var az = fz * f - fx * s;
+  var ax = fx * f - fz * s;
+  var az = fz * f + fx * s;
   var m = Math.hypot(ax, az);
   if (m > 1){ ax /= m; az /= m; }
   input.ax = ax; input.az = az;
@@ -1260,7 +1262,7 @@ stick.addEventListener('touchmove', function(e){
     knob.style.top  = (sy0 - r.top  + dy*k) + 'px';
     var f = -dy / SR, s = dx / SR;
     var fx = Math.sin(camYaw), fz = Math.cos(camYaw);
-    var ax = fx*f + fz*s, az = fz*f - fx*s;
+    var ax = fx*f - fz*s, az = fz*f + fx*s;
     var m = Math.hypot(ax, az);
     if (m > 1){ ax /= m; az /= m; }
     input.ax = ax; input.az = az;
