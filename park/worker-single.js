@@ -853,7 +853,7 @@ function connect(name){
     $('gate-err').textContent = 'Could not reach the park.';
     $('enter').disabled = false;
   };
-  ws.onclose = function(){ if (settled) $('who').textContent = 'disconnected'; };
+  ws.onclose = function(){ if (settled) $('who').textContent = 'lost the park - reload'; };
 }
 
 function sendInput(){
@@ -1009,12 +1009,18 @@ function poseFor(mesh, p, dt){
   if (p.e !== 'sit' && !p.r){ u.legL.rotation.z = 0; u.legR.rotation.z = 0; }
 }
 
+var camReady = false;
 function updateCamera(){
-  var tx = me.x, ty = me.h + 1.3, tz = me.z;
+  var tx = me.x, ty = me.h + 1.45, tz = me.z;
   var cx = tx - Math.sin(camYaw) * Math.cos(camPitch) * camDist;
   var cz = tz - Math.cos(camYaw) * Math.cos(camPitch) * camDist;
   var cy = ty + Math.sin(camPitch) * camDist;
-  camera.position.lerp(new THREE.Vector3(cx, Math.max(0.8, cy), cz), 0.12);
+  var want = new THREE.Vector3(cx, Math.max(1.2, cy), cz);
+  /* Snap the first time. Easing in from the world origin meant the first
+     second of every session was spent inside whatever stood at the corner
+     of the map. */
+  if (!camReady){ camera.position.copy(want); camReady = true; }
+  else camera.position.lerp(want, 0.14);
   camera.lookAt(tx, ty, tz);
 }
 
