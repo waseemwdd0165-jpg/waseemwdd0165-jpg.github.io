@@ -52,6 +52,7 @@ cannot reach. There is nothing in the console to read because nothing was sent.
 | [`public/game.js`](public/game.js) | The map, the tuning, wall collision, and the raycast. Imported by both sides so the server and the browser can never disagree about where a wall is. |
 | [`src/index.js`](src/index.js) | The Worker and the Durable Object: rooms, the tick loop, catches, escapes, rounds, and the per-player slice. |
 | [`public/index.html`](public/index.html) | The whole client. Draws the torch, forwards the stick, predicts only your own movement. |
+| [`worker-single.js`](worker-single.js) | The three files above flattened into one, with the client held as a string the Worker serves. Generated, not hand-edited. |
 
 ---
 
@@ -88,14 +89,27 @@ Zero leaks and zero wrongly hidden across the two definite groups.
 
 ## Running it
 
+Play it here: **<https://pitch-black.waseemwdd0165.workers.dev>**
+
 ```
 npm install
 npm run dev      # local, at http://localhost:8787
 npm run deploy   # to your own Cloudflare account
 ```
 
-`npm run deploy` will open a browser once to log in. SQLite-backed Durable
-Objects are on the Workers free plan, so this costs nothing to run at this size.
+SQLite-backed Durable Objects are on the Workers free plan, so this costs
+nothing to run at this size.
+
+### How the live one was actually deployed
+
+Not with wrangler, because the machine had no Node on it. `worker-single.js`
+was uploaded to the Workers script API as a single module, with the Durable
+Object binding and the `new_sqlite_classes` migration in the same multipart
+request. That is why the client lives in the Worker as a string rather than
+behind an assets binding: one file, one request, no build step and no CLI.
+
+Either route produces the same thing. The single file is generated from the
+three sources above, so edit those and rebuild, never the flattened copy.
 
 ---
 
