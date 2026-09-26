@@ -1,0 +1,592 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<title>Chalk</title>
+<meta name="description" content="One player draws. The other runs on what was drawn. A two player game on a blackboard where the ground does not exist until somebody makes it.">
+<meta property="og:type" content="website">
+<meta property="og:title" content="Chalk">
+<meta property="og:description" content="One player draws. The other runs on what was drawn. The ground does not exist until somebody makes it.">
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Caveat:wght@500;700&family=Inter:wght@400;600&display=swap" rel="stylesheet">
+
+<style>
+:root{
+  --board:#26332C; --chalk:#F2F1E6; --dim:#9FB0A4; --warn:#F5A65B; --bad:#E8776B;
+}
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+html,body{height:100%;overflow:hidden;background:#1A231E}
+body{
+  font:400 16px/1.5 "Inter",-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;
+  color:var(--chalk);
+}
+canvas{position:fixed;inset:0;width:100%;height:100%;display:block;touch-action:none}
+
+.hand{ font-family:"Caveat", cursive }
+
+/* ---------- gate ---------- */
+#gate{
+  position:fixed;inset:0;z-index:40;display:flex;align-items:center;justify-content:center;
+  padding:22px;background:
+    radial-gradient(1200px 700px at 50% 8%, rgba(255,255,255,.05), transparent 60%),
+    var(--board);
+}
+#gate .box{width:100%;max-width:420px;text-align:center}
+#gate h1{
+  font-family:"Caveat",cursive;font-size:clamp(54px,15vw,86px);line-height:.95;
+  font-weight:700;letter-spacing:.01em;
+}
+#gate .sub{ color:var(--dim);margin:2px 0 22px;font-size:16px }
+#gate .sub b{ color:var(--chalk);font-weight:600 }
+label{display:block;text-align:left;font-size:12.5px;color:var(--dim);margin:0 0 6px 2px}
+input[type=text]{
+  width:100%;padding:13px 15px;border-radius:12px;font-size:16px;font-family:inherit;
+  background:rgba(0,0,0,.28);border:1px solid rgba(242,241,230,.22);color:var(--chalk);
+}
+input[type=text]:focus{outline:none;border-color:var(--chalk)}
+input.code{
+  font:700 22px/1 "Inter",monospace;letter-spacing:.26em;text-transform:uppercase;text-align:center;
+}
+button{
+  width:100%;font:600 16px inherit;cursor:pointer;border:0;border-radius:12px;padding:14px;
+  background:var(--chalk);color:#1F2A23;
+}
+button.ghost{background:transparent;border:1px solid rgba(242,241,230,.3);color:var(--chalk)}
+button:disabled{opacity:.45;cursor:not-allowed}
+.row{margin-top:12px}
+.card{
+  background:rgba(0,0,0,.2);border:1px solid rgba(242,241,230,.14);
+  border-radius:16px;padding:18px;margin-top:14px;text-align:left;
+}
+.card h2{font-size:15px;font-weight:600;margin-bottom:4px}
+.card p{color:var(--dim);font-size:13.5px;margin-bottom:12px}
+.err{color:var(--bad);font-size:13.5px;margin-top:10px}
+.hidden{display:none!important}
+.status{font-size:12.5px;color:var(--dim);text-align:center;margin-top:14px}
+
+/* ---------- lobby ---------- */
+.roomcode{
+  font:700 42px/1 "Inter",monospace;letter-spacing:.24em;text-align:center;padding:14px 0 6px;
+}
+ul.players{list-style:none;margin-top:10px}
+ul.players li{
+  display:flex;justify-content:space-between;padding:9px 0;
+  border-top:1px solid rgba(242,241,230,.12);font-size:14.5px;
+}
+ul.players li:first-child{border-top:0}
+.tag{font-size:11px;color:var(--dim);text-transform:uppercase;letter-spacing:.1em}
+
+/* ---------- hud ---------- */
+#hud{position:fixed;top:0;left:0;right:0;padding:14px 16px;z-index:20;pointer-events:none;
+     display:flex;justify-content:space-between;align-items:flex-start}
+.pill{
+  background:rgba(0,0,0,.42);border:1px solid rgba(242,241,230,.16);
+  border-radius:999px;padding:7px 14px;font-size:13px;margin-bottom:7px;display:inline-block;
+}
+#role{font-weight:600}
+#dist{font-family:"Caveat",cursive;font-size:30px;line-height:1;padding:6px 16px}
+
+#inkwrap{
+  position:fixed;left:16px;bottom:16px;z-index:20;width:min(230px,42vw);pointer-events:none;
+}
+#inkwrap .lbl{font-size:11px;color:var(--dim);letter-spacing:.12em;text-transform:uppercase;margin-bottom:5px}
+#inkbar{height:9px;background:rgba(0,0,0,.4);border-radius:999px;overflow:hidden;
+        border:1px solid rgba(242,241,230,.18)}
+#inkbar i{display:block;height:100%;background:var(--chalk);width:100%;transition:width .08s linear}
+#inkbar.low i{background:var(--warn)}
+
+#jump{
+  position:fixed;right:16px;bottom:16px;z-index:20;width:104px;height:104px;border-radius:50%;
+  background:rgba(242,241,230,.14);border:2px solid rgba(242,241,230,.45);
+  color:var(--chalk);font:600 15px inherit;display:none;cursor:pointer;
+}
+#jump:active{background:rgba(242,241,230,.3)}
+
+#banner{
+  position:fixed;left:50%;top:34%;transform:translate(-50%,-50%);z-index:25;text-align:center;
+  pointer-events:none;display:none;width:88%;
+}
+#banner .big{font-family:"Caveat",cursive;font-size:clamp(46px,12vw,86px);line-height:1}
+#banner .small{color:var(--dim);font-size:15px;margin-top:2px}
+</style>
+</head>
+<body>
+
+<canvas id="cv"></canvas>
+
+<div id="gate">
+  <div class="box">
+    <h1 class="hand">Chalk</h1>
+    <p class="sub">One of you <b>draws</b>. The other <b>runs</b> on it.<br>
+    There is no ground until somebody makes some.</p>
+
+    <section id="s-landing">
+      <div class="card">
+        <h2>Start a board</h2>
+        <p>You host. Share the four letters with whoever is playing.</p>
+        <label for="host-name">Your name</label>
+        <input type="text" id="host-name" maxlength="12" placeholder="Your name"
+               autocomplete="off" spellcheck="false">
+        <div class="row"><button id="btn-create">Create board</button></div>
+      </div>
+
+      <div class="card">
+        <h2>Join a board</h2>
+        <label for="join-name">Your name</label>
+        <input type="text" id="join-name" maxlength="12" placeholder="Your name"
+               autocomplete="off" spellcheck="false">
+        <label for="join-code" style="margin-top:12px">Board code</label>
+        <input type="text" id="join-code" class="code" maxlength="4" placeholder="ABCD"
+               autocomplete="off" spellcheck="false">
+        <div class="row"><button class="ghost" id="btn-join">Join board</button></div>
+        <div class="err hidden" id="join-err"></div>
+      </div>
+
+      <div class="card">
+        <h2>How it goes</h2>
+        <p style="margin:0">
+          The runner never stops and cannot go back. Drag anywhere to lay chalk,
+          and it becomes real ground the moment you let go of nothing at all.
+          You can only draw near the runner, and the chalk runs out, so you are
+          always one line behind. Four rounds, roles swap, the score is metres.
+        </p>
+      </div>
+    </section>
+
+    <section id="s-lobby" class="hidden">
+      <div class="card">
+        <h2>Board code</h2>
+        <div class="roomcode" id="lobby-code">----</div>
+        <p style="text-align:center" id="copy-hint">Tap the code to copy the join link</p>
+        <ul class="players" id="lobby-players"></ul>
+        <div class="row" id="host-controls"><button id="btn-start" disabled>Start</button></div>
+        <div class="status hidden" id="lobby-wait">Waiting for the host</div>
+      </div>
+    </section>
+
+    <section id="s-over" class="hidden">
+      <div class="card">
+        <h2>Final</h2>
+        <p id="over-sub"></p>
+        <ul class="players" id="over-list"></ul>
+        <div class="row" id="over-controls"><button id="btn-again">Play again</button></div>
+        <div class="status hidden" id="over-wait">Waiting for the host</div>
+      </div>
+    </section>
+
+    <div class="status" id="conn"></div>
+  </div>
+</div>
+
+<div id="hud">
+  <div><span class="pill" id="role">-</span></div>
+  <div style="text-align:right">
+    <span class="pill" id="round">-</span><br>
+    <span class="pill hand" id="dist">0 m</span>
+  </div>
+</div>
+
+<div id="inkwrap" class="hidden">
+  <div class="lbl">Chalk</div>
+  <div id="inkbar"><i></i></div>
+</div>
+
+<button id="jump">JUMP</button>
+
+<div id="banner"><div class="big hand" id="banner-big"></div><div class="small" id="banner-small"></div></div>
+
+<script>
+/* ==========================================================================
+   Chalk - the browser half
+
+   The server owns the runner and every line. This draws the board, sends the
+   points a finger passes through, and predicts nothing, because a runner that
+   guesses where the ground is would disagree with the person drawing it.
+   ========================================================================== */
+
+var RUNNER_R = 0.36, START_X = 2;
+var REACH_BACK = 6, REACH_FWD = 22, REACH_UP = 9, REACH_DOWN = 7;
+
+var $ = function(id){ return document.getElementById(id); };
+var esc = function(s){ return String(s).replace(/[&<>"]/g, function(c){
+  return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]; }); };
+
+function showMenu(id){
+  ['s-landing','s-lobby','s-over'].forEach(function(s){ $(s).classList.add('hidden'); });
+  if (id) $(id).classList.remove('hidden');
+  $('gate').classList.remove('hidden');
+  $('hud').style.display = 'none';
+  $('inkwrap').classList.add('hidden');
+  $('jump').style.display = 'none';
+}
+function showBoard(){
+  $('gate').classList.add('hidden');
+  $('hud').style.display = 'flex';
+}
+function status(m){ $('conn').textContent = m || ''; }
+function joinErr(m){
+  $('join-err').textContent = m || '';
+  $('join-err').classList.toggle('hidden', !m);
+}
+
+/* ---------- state ---------- */
+var ws = null, myId = null, code = '', myName = '';
+var view = null, role = 'drawer';
+var cam = { x: 0, y: 0 };
+var pending = [];          /* points waiting to be sent */
+
+/* ---------- connection ---------- */
+function roomCode(){
+  var L = 'ABCDEFGHJKLMNPQRSTUVWXYZ', s = '';
+  for (var i = 0; i < 4; i++) s += L[Math.floor(Math.random() * L.length)];
+  return s;
+}
+var attempts = 0;
+
+function connect(rc, name, create){
+  code = rc; myName = name;
+  var settled = false;
+  var btn = create ? $('btn-create') : $('btn-join');
+  btn.disabled = true;
+  btn.textContent = create ? 'Opening...' : 'Connecting...';
+  status(create ? 'Opening board ' + rc : 'Connecting to ' + rc);
+
+  var giveUp = setTimeout(function(){
+    if (settled) return;
+    try { ws && ws.close(); } catch(_){}
+    btn.disabled = false;
+    btn.textContent = create ? 'Create board' : 'Join board';
+    joinErr('No answer from the server after fifteen seconds.');
+  }, 15000);
+
+  var proto = location.protocol === 'https:' ? 'wss:' : 'ws:';
+  ws = new WebSocket(proto + '//' + location.host + '/api/ws?room=' + rc);
+
+  ws.onopen = function(){
+    settled = true; clearTimeout(giveUp);
+    ws.send(JSON.stringify({ t:'join', name:name, create: !!create }));
+  };
+  ws.onmessage = function(e){
+    var m; try { m = JSON.parse(e.data); } catch(_){ return; }
+    onServer(m, btn, create);
+  };
+  ws.onerror = function(){
+    if (settled) return;
+    settled = true; clearTimeout(giveUp);
+    btn.disabled = false;
+    btn.textContent = create ? 'Create board' : 'Join board';
+    joinErr('Could not reach the server.');
+  };
+  ws.onclose = function(){ if (settled) status('Disconnected. Reload to come back.'); };
+}
+
+function onServer(m, btn, create){
+  if (m.t === 'taken'){
+    try { ws.close(); } catch(_){}
+    if (++attempts < 8) connect(roomCode(), myName, true);
+    else { btn.disabled = false; btn.textContent = 'Create board'; joinErr('No free code found.'); }
+    return;
+  }
+  if (m.t === 'closed'){ resetBtn(); joinErr('That board has already started.'); showMenu('s-landing'); return; }
+  if (m.t === 'full'){   resetBtn(); joinErr('That board is full.');            showMenu('s-landing'); return; }
+  if (m.t === 'you'){
+    myId = m.id; myName = m.name; resetBtn();
+    status(create ? 'Board open. Code ' + code : 'Connected to ' + code);
+    return;
+  }
+  if (m.t !== 'state') return;
+
+  view = m;
+  role = m.role;
+
+  if (m.ph === 'lobby'){ renderLobby(); showMenu('s-lobby'); }
+  else if (m.ph === 'over'){ renderOver(); showMenu('s-over'); }
+  else {
+    showBoard();
+    $('role').textContent = role === 'runner' ? 'You are running' : 'You are drawing';
+    $('round').textContent = 'Round ' + (m.round + 1) + ' of ' + m.rounds;
+    $('dist').textContent = (m.r ? m.r.d : 0) + ' m';
+    $('inkwrap').classList.toggle('hidden', role !== 'drawer');
+    $('jump').style.display = role === 'runner' ? 'block' : 'none';
+    var pct = Math.max(0, Math.min(1, m.ink / m.inkMax));
+    $('inkbar').firstElementChild.style.width = (pct * 100) + '%';
+    $('inkbar').classList.toggle('low', pct < 0.25);
+
+    if (m.ph === 'result'){
+      $('banner-big').textContent = m.result;
+      $('banner-small').textContent = 'Next round in a moment';
+      $('banner').style.display = 'block';
+    } else {
+      $('banner').style.display = 'none';
+    }
+  }
+}
+function resetBtn(){
+  $('btn-create').disabled = false; $('btn-create').textContent = 'Create board';
+  $('btn-join').disabled = false;   $('btn-join').textContent = 'Join board';
+}
+
+function renderLobby(){
+  var r = view ? view.roster : [];
+  $('lobby-code').textContent = code || '----';
+  $('lobby-players').innerHTML = r.map(function(p, i){
+    return '<li><span>' + esc(p.n) + '</span><span class="tag">' +
+           (i === 0 ? 'host' : 'ready') + '</span></li>';
+  }).join('');
+  var host = view && view.host;
+  $('host-controls').classList.toggle('hidden', !host);
+  $('lobby-wait').classList.toggle('hidden', !!host);
+  if (host){
+    $('btn-start').disabled = r.length < 2;
+    $('btn-start').textContent = r.length < 2 ? 'Need one more player' : 'Start (' + r.length + ')';
+  }
+}
+function renderOver(){
+  var r = (view ? view.roster : []).slice().sort(function(a,b){ return b.s - a.s; });
+  $('over-sub').textContent = r.length ? r[0].n + ' leads on ' + r[0].s + ' metres.' : '';
+  $('over-list').innerHTML = r.map(function(p, i){
+    return '<li><span>' + (i+1) + '. ' + esc(p.n) + '</span><span>' + p.s + ' m</span></li>';
+  }).join('');
+  var host = view && view.host;
+  $('over-controls').classList.toggle('hidden', !host);
+  $('over-wait').classList.toggle('hidden', !!host);
+}
+
+/* ==========================================================================
+   Board
+   ========================================================================== */
+var cv = $('cv'), ctx = cv.getContext('2d');
+var VW = 0, VH = 0, PPM = 40;      /* pixels per metre */
+
+function resize(){
+  var dpr = Math.min(2, devicePixelRatio || 1);
+  VW = innerWidth; VH = innerHeight;
+  cv.width = Math.round(VW * dpr); cv.height = Math.round(VH * dpr);
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  PPM = Math.max(26, Math.min(56, Math.min(VW, VH) / 13));
+}
+addEventListener('resize', resize);
+resize();
+
+/* world to screen. The camera sits a little behind and below the runner so
+   there is room ahead to draw into. */
+function sx(x){ return (x - cam.x) * PPM + VW * 0.34; }
+function sy(y){ return VH * 0.62 - (y - cam.y) * PPM; }
+function wx(px){ return (px - VW * 0.34) / PPM + cam.x; }
+function wy(py){ return (VH * 0.62 - py) / PPM + cam.y; }
+
+var dust = [];
+function makeDust(){
+  dust = [];
+  for (var i = 0; i < 90; i++){
+    dust.push({ x: Math.random(), y: Math.random(), r: Math.random() * 1.4 + 0.3,
+                a: Math.random() * 0.05 + 0.015 });
+  }
+}
+makeDust();
+
+function frame(){
+  requestAnimationFrame(frame);
+  if (!view || !view.r){ drawBoardOnly(); return; }
+
+  var r = view.r;
+  cam.x += (r.x - cam.x) * 0.16;
+  cam.y += (r.y - cam.y) * 0.10;
+
+  paintBoard();
+  drawReach(r);
+  drawChalk(view.s || []);
+  drawRunner(r);
+  drawLocalStroke();
+}
+
+function paintBoard(){
+  ctx.fillStyle = '#26332C';
+  ctx.fillRect(0, 0, VW, VH);
+  /* faint chalk dust so the board is not a flat colour */
+  for (var i = 0; i < dust.length; i++){
+    var d = dust[i];
+    ctx.fillStyle = 'rgba(242,241,230,' + d.a + ')';
+    ctx.beginPath();
+    ctx.arc(d.x * VW, d.y * VH, d.r * 12, 0, Math.PI * 2);
+    ctx.fill();
+  }
+  /* a horizon smudge, like a board wiped with a cloth */
+  var g = ctx.createLinearGradient(0, VH * 0.25, 0, VH);
+  g.addColorStop(0, 'rgba(255,255,255,.035)');
+  g.addColorStop(1, 'rgba(0,0,0,.12)');
+  ctx.fillStyle = g;
+  ctx.fillRect(0, 0, VW, VH);
+}
+function drawBoardOnly(){ paintBoard(); }
+
+/* the patch of board the drawer is allowed to work in */
+function drawReach(r){
+  if (role !== 'drawer') return;
+  var x0 = sx(r.x - REACH_BACK), x1 = sx(r.x + REACH_FWD);
+  var y0 = sy(r.y + REACH_UP),   y1 = sy(r.y - REACH_DOWN);
+  ctx.save();
+  ctx.setLineDash([7, 9]);
+  ctx.strokeStyle = 'rgba(242,241,230,.18)';
+  ctx.lineWidth = 1.5;
+  ctx.strokeRect(x0, y0, x1 - x0, y1 - y0);
+  ctx.restore();
+}
+
+/* Chalk is drawn twice, a soft wide pass and a bright thin one, which is what
+   makes a line look dusty rather than printed. */
+function drawChalk(segs){
+  if (!segs.length) return;
+  ctx.lineCap = 'round'; ctx.lineJoin = 'round';
+
+  ctx.strokeStyle = 'rgba(242,241,230,.20)';
+  ctx.lineWidth = 11;
+  ctx.beginPath();
+  for (var i = 0; i < segs.length; i++){
+    var s = segs[i];
+    ctx.moveTo(sx(s[0]), sy(s[1])); ctx.lineTo(sx(s[2]), sy(s[3]));
+  }
+  ctx.stroke();
+
+  ctx.strokeStyle = 'rgba(242,241,230,.95)';
+  ctx.lineWidth = 4.5;
+  ctx.beginPath();
+  for (var j = 0; j < segs.length; j++){
+    var t = segs[j];
+    ctx.moveTo(sx(t[0]), sy(t[1])); ctx.lineTo(sx(t[2]), sy(t[3]));
+  }
+  ctx.stroke();
+}
+
+function drawLocalStroke(){
+  if (role !== 'drawer' || pending.length < 4) return;
+  ctx.lineCap = 'round'; ctx.lineJoin = 'round';
+  ctx.strokeStyle = 'rgba(242,241,230,.55)';
+  ctx.lineWidth = 4.5;
+  ctx.beginPath();
+  ctx.moveTo(sx(pending[0]), sy(pending[1]));
+  for (var i = 2; i + 1 < pending.length; i += 2) ctx.lineTo(sx(pending[i]), sy(pending[i+1]));
+  ctx.stroke();
+}
+
+/* a chalk stick figure, legs swinging while it is on the ground */
+function drawRunner(r){
+  var x = sx(r.x), y = sy(r.y), s = PPM;
+  var t = performance.now() / 1000;
+  var swing = r.g ? Math.sin(t * 15) : 0.55;
+
+  ctx.save();
+  ctx.translate(x, y);
+  ctx.globalAlpha = r.a ? 1 : 0.35;
+  ctx.strokeStyle = 'rgba(242,241,230,.98)';
+  ctx.lineCap = 'round';
+  ctx.lineWidth = Math.max(2.4, s * 0.075);
+
+  /* head */
+  ctx.beginPath();
+  ctx.arc(0, -s * 0.52, s * 0.19, 0, Math.PI * 2);
+  ctx.stroke();
+  /* body */
+  ctx.beginPath();
+  ctx.moveTo(0, -s * 0.33); ctx.lineTo(0, s * 0.06);
+  ctx.stroke();
+  /* arms */
+  ctx.beginPath();
+  ctx.moveTo(0, -s * 0.2);
+  ctx.lineTo(-s * 0.26, -s * 0.05 + swing * s * 0.1);
+  ctx.moveTo(0, -s * 0.2);
+  ctx.lineTo( s * 0.26, -s * 0.05 - swing * s * 0.1);
+  ctx.stroke();
+  /* legs */
+  ctx.beginPath();
+  ctx.moveTo(0, s * 0.06);
+  ctx.lineTo(-s * 0.2 + swing * s * 0.2, s * 0.36);
+  ctx.moveTo(0, s * 0.06);
+  ctx.lineTo( s * 0.2 + swing * s * 0.2, s * 0.36);
+  ctx.stroke();
+  ctx.restore();
+}
+
+requestAnimationFrame(frame);
+
+/* ==========================================================================
+   Input
+   ========================================================================== */
+function sendJump(){ if (ws && ws.readyState === 1) ws.send(JSON.stringify({ t:'jump' })); }
+
+var drawing = false, penId = null, lastSent = 0;
+function flush(force){
+  if (!ws || ws.readyState !== 1) return;
+  if (pending.length < 4) return;
+  var now = performance.now();
+  if (!force && now - lastSent < 60) return;
+  lastSent = now;
+  ws.send(JSON.stringify({ t:'draw', pts: pending }));
+  /* keep the last point so the next batch joins on */
+  pending = pending.slice(-2);
+}
+
+cv.addEventListener('pointerdown', function(e){
+  if (role !== 'drawer' || !view || view.ph !== 'play') return;
+  drawing = true; penId = e.pointerId; pending = [wx(e.clientX), wy(e.clientY)];
+  cv.setPointerCapture(e.pointerId);
+});
+cv.addEventListener('pointermove', function(e){
+  if (!drawing || e.pointerId !== penId) return;
+  pending.push(wx(e.clientX), wy(e.clientY));
+  if (pending.length > 80) flush(true);
+  else flush(false);
+});
+function penUp(e){
+  if (e.pointerId !== penId) return;
+  flush(true);
+  drawing = false; penId = null; pending = [];
+}
+cv.addEventListener('pointerup', penUp);
+cv.addEventListener('pointercancel', penUp);
+
+/* the runner taps anywhere, or uses the button, or the space bar */
+cv.addEventListener('pointerdown', function(){ if (role === 'runner') sendJump(); });
+$('jump').addEventListener('pointerdown', function(e){ e.preventDefault(); sendJump(); });
+addEventListener('keydown', function(e){
+  if (e.target && e.target.tagName === 'INPUT') return;
+  if (e.key === ' ' || e.key === 'ArrowUp' || e.key === 'w'){ sendJump(); e.preventDefault(); }
+});
+
+/* ---------- wiring ---------- */
+$('btn-create').onclick = function(){
+  joinErr('');
+  attempts = 0;
+  connect(roomCode(), ($('host-name').value || 'Host').trim().slice(0,12) || 'Host', true);
+};
+$('btn-join').onclick = function(){
+  var rc = ($('join-code').value || '').trim().toUpperCase();
+  if (rc.length !== 4){ joinErr('The board code is four letters.'); return; }
+  joinErr('');
+  connect(rc, ($('join-name').value || 'Player').trim().slice(0,12) || 'Player', false);
+};
+$('btn-start').onclick = function(){ if (ws && ws.readyState === 1) ws.send(JSON.stringify({ t:'start' })); };
+$('btn-again').onclick = function(){ if (ws && ws.readyState === 1) ws.send(JSON.stringify({ t:'again' })); };
+
+$('join-code').addEventListener('input', function(){
+  this.value = this.value.toUpperCase().replace(/[^A-Z]/g, '');
+});
+$('join-code').addEventListener('keydown', function(e){ if (e.key === 'Enter') $('btn-join').click(); });
+
+$('lobby-code').addEventListener('click', function(){
+  if (!code || !navigator.clipboard) return;
+  navigator.clipboard.writeText(location.origin + location.pathname + '?room=' + code)
+    .then(function(){
+      $('copy-hint').textContent = 'Join link copied';
+      setTimeout(function(){ $('copy-hint').textContent = 'Tap the code to copy the join link'; }, 1800);
+    }).catch(function(){});
+});
+
+var pre = location.search.match(/room=([A-Za-z]{4})/);
+if (pre){ $('join-code').value = pre[1].toUpperCase(); $('join-name').focus(); }
+</script>
+</body>
+</html>
