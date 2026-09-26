@@ -81,10 +81,14 @@ ok('the end screen names the gap to the record', /157 m/.test(rec) && /312 m/.te
 ok('the end list shows the best run', /best run 155/.test(E('over-list').innerHTML), E('over-list').innerHTML);
 ok('the stored board is on the end screen', /Cat/.test(E('top-list-2').innerHTML), E('top-list-2').innerHTML);
 
-ctx.recordBefore = 100;
+ctx.recordBefore = 100; ctx.recordSeen = true;
 ctx.view = { roster:[{i:'p1',n:'Ann',s:290,b:155,r:'runner'}], host:true };
 ctx.renderRecord([{ n:'Ann', m:155, w:'Bob' }]);
 ok('a new record is announced', /New record/.test(E('over-record').innerHTML), E('over-record').innerHTML);
+
+ctx.recordBefore = 0; ctx.recordSeen = true;
+ctx.renderRecord([]);
+ok('the very first run is put differently', /First name on the board/.test(E('over-record').innerHTML), E('over-record').innerHTML);
 
 /* drawing: a flicked finger must not produce segments the server will drop */
 S(base({}), btn, true, '');

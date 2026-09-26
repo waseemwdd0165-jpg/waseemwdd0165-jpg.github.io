@@ -82,7 +82,10 @@ export const SEND_FWD    = 60;
 export const IDLE_MS     = 20 * 60 * 1000;
 
 export const TOP_N       = 10;      /* how many scores the board keeps */
-export const TOP_ROOM    = '__top__';
+/* Naming the board rather than hard coding '__top__' means a bad set of scores
+   can be left behind by pointing at a fresh object, which is what happened
+   after the first live test filled it with two of mine. */
+export const TOP_ROOM    = '__board_v1__';
 
 export function roomCode(rnd){
   const L = 'ABCDEFGHJKLMNPQRSTUVWXYZ';   /* no I or O, they misread aloud */

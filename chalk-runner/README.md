@@ -63,7 +63,7 @@ client.html        the browser: drawing, rendering, sound, music
 build.py           folds the two into worker-single.js
 worker-single.js   generated, the thing that gets deployed
 test.mjs           124 checks against the built server
-smoke.mjs          21 checks against the client, in a hand written DOM
+smoke.mjs          22 checks against the client, in a hand written DOM
 domshim.mjs        that hand written DOM
 ```
 
@@ -147,7 +147,7 @@ milestones, the leap being banked and spent, the practice bot staying within
 reach, the leaderboard sorting and capping and surviving a reload, and the idle
 board shutting itself down.
 
-`node smoke.mjs` runs **21 checks against the browser half**. There is no real
+`node smoke.mjs` runs **22 checks against the browser half**. There is no real
 browser here, so `domshim.mjs` is a small hand written DOM and the client is
 driven with the exact messages the server sends. It cannot tell you whether the
 game looks good. It can tell you whether the screen says the right numbers,
@@ -160,7 +160,7 @@ throws.
 ```
 python3 build.py        # writes worker-single.js, checks it is plain ASCII
 node test.mjs           # 124 server checks
-node smoke.mjs          # 21 client checks
+node smoke.mjs          # 22 client checks
 ```
 
 Then upload `worker-single.js` as a Cloudflare Worker with a Durable Object

@@ -127,7 +127,7 @@ ul.list li:first-child{border-top:0}
 }
 #track i{display:block;height:100%;background:var(--warn);width:0%;transition:width .15s linear}
 #tracklbl{
-  position:fixed;left:50%;transform:translateX(-50%);top:64px;z-index:20;
+  position:fixed;left:50%;transform:translateX(-50%);top:67px;z-index:20;
   font-size:10.5px;color:var(--dim);letter-spacing:.1em;text-transform:uppercase;pointer-events:none;
 }
 
@@ -560,6 +560,7 @@ function onServer(m, btn, create, label){
      close you came without comparing you against your own run */
   if (m.ph === 'play' && wasPh !== 'play' && wasPh !== 'result'){
     recordBefore = topRows.length ? topRows[0].m : 0;
+    recordSeen = true;
   }
   view = m;
   role = m.role;
@@ -682,13 +683,17 @@ function renderRecord(rows){
   var roster = (view ? view.roster : []);
   var mine = 0, who = '';
   roster.forEach(function(p){ if (p.b > mine){ mine = p.b; who = p.n; } });
-  var rec = recordBefore || ((rows && rows.length) ? rows[0].m : 0);
+  /* the record as it stood when this match began, so a pair are not measured
+     against the run they have just made */
+  var rec = recordSeen ? recordBefore : ((rows && rows.length) ? rows[0].m : 0);
   var holder = (rows && rows.length) ? rows[0].n : '';
 
   if (!mine){ el.className = 'record'; el.textContent = ''; return; }
   if (!rec || mine > rec){
     el.className = 'record beat';
-    el.innerHTML = 'New record. <b>' + mine + ' m</b> by ' + esc(who) + '.';
+    el.innerHTML = rec
+      ? 'New record. <b>' + mine + ' m</b> by ' + esc(who) + '.'
+      : 'First name on the board. <b>' + mine + ' m</b> by ' + esc(who) + '.';
     buzz([30, 60, 30, 60, 30]);
   } else if (mine === rec){
     el.className = 'record beat';
@@ -702,7 +707,7 @@ function renderRecord(rows){
 }
 
 /* ---------- the stored leaderboard ---------- */
-var topRows = [], recordBefore = 0;
+var topRows = [], recordBefore = 0, recordSeen = false;
 function loadTop(into, after){
   fetch('/api/top', { cache:'no-store' }).then(function(r){ return r.json(); }).then(function(j){
     var rows = (j.top || []).slice(0, 10);
@@ -805,9 +810,17 @@ function chalkPath(segs, X, Y){
   return p;
 }
 
+/* The local echo is only there to cover the round trip, so anything older than
+   a moment is dead weight. This gets pruned on the way in as well as on the way
+   out, because a backgrounded tab stops drawing frames but keeps drawing chalk,
+   and the list grew into the thousands during a live test. */
+function pruneLocal(now){
+  while (localSegs.length && now - localSegs[0].at > 700) localSegs.shift();
+  if (localSegs.length > 900) localSegs.splice(0, localSegs.length - 900);
+}
 function liveSegs(){
   var now = performance.now();
-  while (localSegs.length && now - localSegs[0].at > 700) localSegs.shift();
+  pruneLocal(now);
   var out = (view && view.s) ? view.s.slice() : [];
   for (var i = 0; i < localSegs.length; i++) out.push(localSegs[i].s);
   return out;
@@ -873,10 +886,10 @@ function drawMilestones(r){
     ctx.setLineDash([5, 8]);
     ctx.beginPath(); ctx.moveTo(X, 0); ctx.lineTo(X, VH); ctx.stroke();
     ctx.setLineDash([]);
-    ctx.font = '600 13px "Caveat", cursive';
-    ctx.fillStyle = passed ? 'rgba(240,166,92,.7)' : 'rgba(244,243,233,.38)';
+    ctx.font = '700 21px "Caveat", cursive';
+    ctx.fillStyle = passed ? 'rgba(240,166,92,.8)' : 'rgba(244,243,233,.45)';
     ctx.textAlign = 'center';
-    ctx.fillText(d + ' m', X, VH * 0.14);
+    ctx.fillText(d + ' m', X, VH * 0.15);
   }
 
   /* the record, standing out there on the board waiting to be run past */
@@ -949,7 +962,7 @@ requestAnimationFrame(frame);
    ========================================================================== */
 (function(){
   var dc = $('demo'), g = dc.getContext('2d');
-  var W = 0, H = 0, t = 0;
+  var W = 0, H = 0, born = performance.now();
   function fit(){
     var dpr = Math.min(2, devicePixelRatio || 1);
     W = dc.clientWidth; H = dc.clientHeight;
@@ -962,7 +975,9 @@ requestAnimationFrame(frame);
     requestAnimationFrame(tick);
     if ($('gate').classList.contains('hidden')) return;
     if (!W){ fit(); return; }
-    t += 0.016;
+    /* on the clock, not per frame: a throttled tab should drop frames, not
+       run the whole loop in slow motion */
+    var t = (performance.now() - born) / 1000 + 1.4;
     var loop = 5.0, u = (t % loop) / loop;
 
     g.fillStyle = '#1E2823'; g.fillRect(0, 0, W, H);
@@ -1020,6 +1035,7 @@ function flush(force){
   for (var i = 0; i + 3 < pending.length; i += 2){
     localSegs.push({ s: [pending[i], pending[i+1], pending[i+2], pending[i+3]], at: now });
   }
+  pruneLocal(now);
   pending = pending.slice(-2);
 }
 
@@ -1201,7 +1217,10 @@ export const SEND_FWD    = 60;
 export const IDLE_MS     = 20 * 60 * 1000;
 
 export const TOP_N       = 10;      /* how many scores the board keeps */
-export const TOP_ROOM    = '__top__';
+/* Naming the board rather than hard coding '__top__' means a bad set of scores
+   can be left behind by pointing at a fresh object, which is what happened
+   after the first live test filled it with two of mine. */
+export const TOP_ROOM    = '__board_v1__';
 
 export function roomCode(rnd){
   const L = 'ABCDEFGHJKLMNPQRSTUVWXYZ';   /* no I or O, they misread aloud */
