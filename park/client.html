@@ -309,7 +309,7 @@ var others = {};            /* id -> {cur, target, data} */
 var me = { x: 30, z: 38.2, h: 0, dir: -Math.PI/2, ride: null };
 var input = { ax: 0, az: 0 };
 var tickets = 0, wishes = 0;
-var camYaw = 0, camPitch = 0.42, camDist = 9;
+var camYaw = 0, camPitch = 0.52, camDist = 14;
 var inGallery = false, typing = false;
 
 /* ==========================================================================
@@ -353,9 +353,9 @@ function speckle(g, base, shades, seed){
 
 var TEX = {};
 function buildTextures(){
-  TEX.grass  = tex(function(g){ speckle(g, '#5FA63A', ['#6FBE45','#4E8C30','#79C94D'], 7); });
+  TEX.grass  = tex(function(g){ speckle(g, '#4F8A36', ['#5C9C40','#42742D','#67A84A'], 7); });
   TEX.dirt   = tex(function(g){ speckle(g, '#8A6440', ['#9C7149','#755436','#A67C52'], 13); });
-  TEX.path   = tex(function(g){ speckle(g, '#C7B489', ['#D6C69C','#B2A076','#E0D2AC'], 29); });
+  TEX.path   = tex(function(g){ speckle(g, '#AD9769', ['#BBA678','#9A855B','#C6B288'], 29); });
   TEX.stone  = tex(function(g){ speckle(g, '#8B8B8B', ['#9E9E9E','#767676','#ADADAD'], 41); });
   TEX.leaves = tex(function(g){
     speckle(g, '#3E7A2A', ['#4C9134','#2F6220','#57A03C'], 53);
@@ -371,7 +371,7 @@ function buildTextures(){
     g.fillRect(3, 0, 1, 16); g.fillRect(9, 0, 1, 16); g.fillRect(13, 0, 1, 16);
   });
   TEX.plank = tex(function(g){
-    speckle(g, '#B08048', ['#C08F55','#9A6E3C'], 83);
+    speckle(g, '#9C7040', ['#AC7E4A','#876034'], 83);
     g.fillStyle = 'rgba(0,0,0,.26)';
     g.fillRect(0, 3, 16, 1); g.fillRect(0, 8, 16, 1); g.fillRect(0, 13, 16, 1);
   });
@@ -776,9 +776,10 @@ function makeLabel(text){
   var x = c.getContext('2d');
   x.font = 'bold 26px "Silkscreen", monospace';
   x.textAlign = 'center'; x.textBaseline = 'middle';
-  x.fillStyle = 'rgba(0,0,0,.55)';
-  x.fillRect(18, 16, 220, 34);
-  x.fillStyle = '#fff';
+  x.lineJoin = 'round';
+  x.lineWidth = 7; x.strokeStyle = 'rgba(0,0,0,.72)';
+  x.strokeText(text, 128, 34);
+  x.fillStyle = '#FFFFFF';
   x.fillText(text, 128, 34);
   var t = new THREE.CanvasTexture(c);
   t.magFilter = THREE.NearestFilter; t.minFilter = THREE.NearestFilter;
@@ -1206,7 +1207,7 @@ addEventListener('pointermove', function(e){
 });
 addEventListener('pointerup', function(e){ if (e.pointerId === dragId) dragging = false; });
 addEventListener('wheel', function(e){
-  camDist = Math.max(4, Math.min(18, camDist + Math.sign(e.deltaY) * 0.8));
+  camDist = Math.max(5, Math.min(26, camDist + Math.sign(e.deltaY) * 0.8));
 }, { passive: true });
 
 /* touch stick */
