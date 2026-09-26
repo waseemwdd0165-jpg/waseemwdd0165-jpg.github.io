@@ -31,28 +31,64 @@ canvas{display:block}
 /* ---------- gate ---------- */
 #gate{
   position:fixed;inset:0;z-index:40;display:flex;align-items:center;justify-content:center;
-  padding:24px;text-align:center;
+  padding:24px;text-align:center;overflow:hidden;
   background:
-    radial-gradient(900px 600px at 50% 15%, #2C4A7A, transparent 70%),
-    linear-gradient(#101826, #0A0E16);
+    radial-gradient(1100px 700px at 50% -8%, #FFCE7A22, transparent 62%),
+    radial-gradient(800px 560px at 18% 96%, #5B7CFF33, transparent 68%),
+    linear-gradient(#152238, #080C14);
 }
-#gate .box{max-width:420px;width:100%}
-#gate h1{font-size:clamp(34px,10vw,56px);letter-spacing:-.02em;line-height:1;margin-bottom:6px}
-#gate h1 span{color:var(--accent)}
-#gate p{color:var(--muted);margin-bottom:22px}
+/* a slow drift of lights behind the card, like a fairground at dusk */
+#gate::before{
+  content:"";position:absolute;inset:-30%;
+  background:
+    radial-gradient(5px 5px at 20% 30%, #FFD68A99, transparent 60%),
+    radial-gradient(4px 4px at 68% 18%, #8FD4FF99, transparent 60%),
+    radial-gradient(6px 6px at 82% 62%, #FF9BB399, transparent 60%),
+    radial-gradient(4px 4px at 36% 78%, #B8FFB099, transparent 60%),
+    radial-gradient(5px 5px at 54% 44%, #FFE9A899, transparent 60%);
+  animation: drift 26s linear infinite;
+  opacity:.75;
+}
+@keyframes drift{
+  0%{transform:translate3d(0,0,0) rotate(0deg)}
+  100%{transform:translate3d(-4%,-3%,0) rotate(6deg)}
+}
+#gate .box{
+  position:relative;max-width:430px;width:100%;
+  background:rgba(10,15,26,.66);border:1px solid rgba(255,255,255,.12);
+  border-radius:22px;padding:34px 28px 28px;
+  box-shadow:0 30px 80px rgba(0,0,0,.55), inset 0 1px 0 rgba(255,255,255,.08);
+  backdrop-filter:blur(14px);
+}
+#gate h1{
+  font-size:clamp(36px,10vw,58px);letter-spacing:-.025em;line-height:1;margin-bottom:8px;
+  text-shadow:0 6px 30px rgba(255,180,67,.22);
+}
+#gate h1 span{
+  background:linear-gradient(#FFD98A,#FF9E3D);
+  -webkit-background-clip:text;background-clip:text;color:transparent;
+}
+#gate p{color:var(--muted);margin-bottom:24px;font-size:15px}
 #gate input{
-  width:100%;padding:14px 16px;border-radius:12px;font-size:17px;font-family:inherit;
-  background:rgba(0,0,0,.4);border:1px solid var(--line);color:var(--ink);text-align:center;
+  width:100%;padding:15px 16px;border-radius:14px;font-size:17px;font-family:inherit;
+  background:rgba(0,0,0,.45);border:1px solid var(--line);color:var(--ink);text-align:center;
+  transition:border-color .18s, box-shadow .18s;
 }
-#gate input:focus{outline:none;border-color:var(--accent)}
+#gate input:focus{outline:none;border-color:var(--accent);box-shadow:0 0 0 4px rgba(255,180,67,.16)}
 #gate button{
-  width:100%;margin-top:12px;padding:15px;border:0;border-radius:12px;cursor:pointer;
-  background:var(--accent);color:#231603;font:700 17px inherit;
+  width:100%;margin-top:12px;padding:16px;border:0;border-radius:14px;cursor:pointer;
+  background:linear-gradient(#FFC463,#F59A22);color:#2A1A02;font:700 17px inherit;
+  box-shadow:0 10px 26px rgba(245,154,34,.32);transition:transform .08s, box-shadow .18s;
 }
-#gate button:disabled{opacity:.5;cursor:not-allowed}
-#gate .err{color:#FF8A8A;font-size:14px;margin-top:12px;min-height:20px}
-#gate .tips{margin-top:26px;color:var(--muted);font-size:13.5px;line-height:1.8;text-align:left}
-#gate .tips b{color:var(--ink)}
+#gate button:hover{box-shadow:0 14px 34px rgba(245,154,34,.42)}
+#gate button:active{transform:translateY(1px)}
+#gate button:disabled{opacity:.5;cursor:not-allowed;box-shadow:none}
+#gate .err{color:#FF9A9A;font-size:14px;margin-top:12px;min-height:20px}
+#gate .tips{
+  margin-top:24px;padding-top:20px;border-top:1px solid rgba(255,255,255,.09);
+  color:var(--muted);font-size:13.5px;line-height:1.9;text-align:left;
+}
+#gate .tips b{color:var(--accent)}
 
 /* ---------- hud ---------- */
 .hud{position:fixed;z-index:20;pointer-events:none}
@@ -60,20 +96,33 @@ canvas{display:block}
 #topright{top:14px;right:14px;text-align:right}
 .chip{
   display:inline-block;background:var(--panel);border:1px solid var(--line);
-  border-radius:10px;padding:8px 12px;font-size:13.5px;backdrop-filter:blur(8px);margin-bottom:6px;
+  border-radius:14px;padding:9px 14px;font-size:13.5px;margin-bottom:7px;
+  backdrop-filter:blur(10px);
+  box-shadow:0 8px 22px rgba(0,0,0,.34), inset 0 1px 0 rgba(255,255,255,.07);
 }
-.chip b{color:var(--accent)}
-#who{font-weight:700}
-#board{font-size:13px;line-height:1.7;max-width:190px}
-#board .row{display:flex;justify-content:space-between;gap:12px}
-#board .me{color:var(--accent)}
+.chip b{color:var(--accent);font-size:15px}
+#who{font-weight:700;letter-spacing:.01em}
+#board{font-size:13px;line-height:1.8;min-width:168px}
+#board .row{display:flex;justify-content:space-between;gap:14px}
+#board .me{color:var(--accent);font-weight:700}
+#board .hd{
+  color:var(--muted);font-size:11px;letter-spacing:.11em;text-transform:uppercase;
+  margin-bottom:6px;padding-bottom:6px;border-bottom:1px solid rgba(255,255,255,.1);
+}
 
 #prompt{
-  position:fixed;left:50%;bottom:132px;transform:translateX(-50%);z-index:20;
-  background:var(--panel);border:1px solid var(--accent);border-radius:12px;
-  padding:11px 18px;font-size:15px;backdrop-filter:blur(8px);display:none;
+  position:fixed;left:50%;bottom:136px;transform:translateX(-50%);z-index:20;
+  background:linear-gradient(rgba(24,18,6,.9), rgba(14,11,4,.9));
+  border:1px solid rgba(255,180,67,.55);border-radius:999px;
+  padding:12px 22px;font-size:15px;backdrop-filter:blur(10px);display:none;
+  box-shadow:0 12px 34px rgba(0,0,0,.45), 0 0 26px rgba(255,180,67,.16);
+  animation:breathe 2.6s ease-in-out infinite;white-space:nowrap;
 }
 #prompt b{color:var(--accent)}
+@keyframes breathe{
+  0%,100%{box-shadow:0 12px 34px rgba(0,0,0,.45), 0 0 20px rgba(255,180,67,.12)}
+  50%    {box-shadow:0 12px 34px rgba(0,0,0,.45), 0 0 34px rgba(255,180,67,.3)}
+}
 
 #toast{
   position:fixed;left:50%;top:22%;transform:translateX(-50%);z-index:25;
@@ -91,10 +140,17 @@ canvas{display:block}
 #buttons{position:fixed;right:14px;bottom:18px;z-index:20;display:flex;flex-direction:column;gap:10px;align-items:flex-end}
 .btn{
   pointer-events:auto;background:var(--panel);border:1px solid var(--line);color:var(--ink);
-  border-radius:12px;padding:12px 15px;font:600 14px inherit;cursor:pointer;backdrop-filter:blur(8px);
+  border-radius:14px;padding:12px 17px;font:600 14px inherit;cursor:pointer;
+  backdrop-filter:blur(10px);
+  box-shadow:0 8px 22px rgba(0,0,0,.34), inset 0 1px 0 rgba(255,255,255,.07);
+  transition:transform .08s, border-color .18s, background .18s;
 }
+.btn:hover{border-color:rgba(255,180,67,.5)}
 .btn:active{transform:translateY(1px)}
-.btn.go{background:var(--accent);color:#231603;border-color:transparent}
+.btn.go{
+  background:linear-gradient(#FFC463,#F59A22);color:#2A1A02;border-color:transparent;
+  box-shadow:0 10px 26px rgba(245,154,34,.34);
+}
 #emotes{display:none;flex-direction:column;gap:8px}
 
 #chatbar{
@@ -319,29 +375,116 @@ function buildGround(){
   scene.add(water);
 }
 
+/* A sphere on a stick reads as a lollipop, not a tree. Pushing the sphere's
+   vertices around with a cheap hash gives a lumpy canopy that catches the
+   light unevenly, which is most of what makes a tree look like a tree. */
+function lumpySphere(r, lumps, seed){
+  var g = new THREE.SphereGeometry(r, 10, 8);
+  var pos = g.attributes.position;
+  for (var i = 0; i < pos.count; i++){
+    var x = pos.getX(i), y = pos.getY(i), z = pos.getZ(i);
+    var h = Math.sin((x*12.9898 + y*78.233 + z*37.719 + seed) * 43758.5453);
+    h = h - Math.floor(h);
+    var k = 1 + (h - 0.5) * lumps;
+    pos.setXYZ(i, x*k, y*k*0.86, z*k);
+  }
+  g.computeVertexNormals();
+  return g;
+}
+
 function buildTrees(){
   var spots = [];
   for (var y = 0; y < MH; y++) for (var x = 0; x < MW; x++)
     if (MAP[y][x] === 'T') spots.push([x+0.5, y+0.5]);
 
-  var trunkG = new THREE.CylinderGeometry(0.13, 0.19, 1.5, 6);
-  var trunkM = new THREE.MeshLambertMaterial({ color: 0x6B4A2F });
-  var leafG  = new THREE.SphereGeometry(0.95, 8, 7);
-  var leafM  = new THREE.MeshLambertMaterial({ color: 0x3F7A34 });
+  var barkM = new THREE.MeshLambertMaterial({ color: 0x5E4530 });
+  var trunkG = new THREE.CylinderGeometry(0.1, 0.22, 1.9, 6);
 
-  var trunks = new THREE.InstancedMesh(trunkG, trunkM, spots.length);
-  var leaves = new THREE.InstancedMesh(leafG, leafM, spots.length);
-  var m = new THREE.Matrix4();
-  for (var i = 0; i < spots.length; i++){
-    var s = 0.82 + ((i * 37) % 11) / 22;
-    m.makeTranslation(spots[i][0], 0.75*s, spots[i][1]);
-    m.scale(new THREE.Vector3(s, s, s));
-    trunks.setMatrixAt(i, m);
-    m.makeTranslation(spots[i][0], (1.55 + 0.25*s)*s, spots[i][1]);
-    m.scale(new THREE.Vector3(s, s*1.15, s));
-    leaves.setMatrixAt(i, m);
+  /* three greens and two silhouettes, so a stand of trees is not one shape
+     repeated forty times */
+  var greens = [0x2F6B2C, 0x3E8438, 0x53994A];
+  var round = [
+    lumpySphere(0.95, 0.44, 1.7),
+    lumpySphere(0.78, 0.52, 9.1),
+    lumpySphere(0.62, 0.48, 4.3)
+  ];
+  var pineG = new THREE.ConeGeometry(0.92, 2.4, 8);
+
+  var buckets = [];
+  for (var c = 0; c < greens.length; c++){
+    buckets.push({
+      colour: greens[c],
+      round: [[], [], []],   /* three blobs per broadleaf tree */
+      pine: []
+    });
   }
-  scene.add(trunks); scene.add(leaves);
+
+  var trunkXf = [];
+  for (var i = 0; i < spots.length; i++){
+    var hx = Math.abs(Math.sin(i * 12.9898) * 43758.5453) % 1;
+    var hy = Math.abs(Math.sin(i * 78.233)  * 43758.5453) % 1;
+    var s  = 0.78 + hy * 0.62;
+    var lean = (hx - 0.5) * 0.13;
+    var b = buckets[i % buckets.length];
+    var isPine = hx > 0.74;
+
+    trunkXf.push({ x: spots[i][0], z: spots[i][1], s: s, lean: lean, pine: isPine });
+
+    if (isPine){
+      b.pine.push({ x: spots[i][0], z: spots[i][1], s: s, lean: lean, rot: hy * 6.28 });
+    } else {
+      /* three blobs, stacked and nudged sideways, make a crown */
+      b.round[0].push({ x: spots[i][0], z: spots[i][1], s: s, y: 2.05, ox: 0,            oz: 0,            rot: hy*6.28 });
+      b.round[1].push({ x: spots[i][0], z: spots[i][1], s: s, y: 2.55, ox: (hx-0.5)*0.7, oz: (hy-0.5)*0.7, rot: hx*6.28 });
+      b.round[2].push({ x: spots[i][0], z: spots[i][1], s: s, y: 1.7,  ox: (hy-0.5)*0.9, oz: (hx-0.5)*0.9, rot: hy*3.14 });
+    }
+  }
+
+  var m = new THREE.Matrix4(), q = new THREE.Quaternion(),
+      e = new THREE.Euler(), v = new THREE.Vector3(), sc = new THREE.Vector3();
+
+  var trunks = new THREE.InstancedMesh(trunkG, barkM, trunkXf.length);
+  for (var t = 0; t < trunkXf.length; t++){
+    var a = trunkXf[t];
+    e.set(a.lean, 0, a.lean * 0.7); q.setFromEuler(e);
+    v.set(a.x, 0.95 * a.s, a.z); sc.set(a.s, a.s, a.s);
+    m.compose(v, q, sc);
+    trunks.setMatrixAt(t, m);
+  }
+  scene.add(trunks);
+
+  for (var bi = 0; bi < buckets.length; bi++){
+    var bk = buckets[bi];
+    var mat = new THREE.MeshLambertMaterial({ color: bk.colour });
+
+    for (var ri = 0; ri < 3; ri++){
+      var list = bk.round[ri];
+      if (!list.length) continue;
+      var im = new THREE.InstancedMesh(round[ri], mat, list.length);
+      for (var k = 0; k < list.length; k++){
+        var o = list[k];
+        e.set(0, o.rot, 0); q.setFromEuler(e);
+        v.set(o.x + o.ox * o.s, o.y * o.s, o.z + o.oz * o.s);
+        sc.set(o.s, o.s, o.s);
+        m.compose(v, q, sc);
+        im.setMatrixAt(k, m);
+      }
+      scene.add(im);
+    }
+
+    if (bk.pine.length){
+      var pm = new THREE.InstancedMesh(pineG, mat, bk.pine.length);
+      for (var pi = 0; pi < bk.pine.length; pi++){
+        var pp = bk.pine[pi];
+        e.set(pp.lean, pp.rot, pp.lean * 0.7); q.setFromEuler(e);
+        v.set(pp.x, 2.5 * pp.s, pp.z);
+        sc.set(pp.s, pp.s * 1.25, pp.s);
+        m.compose(v, q, sc);
+        pm.setMatrixAt(pi, m);
+      }
+      scene.add(pm);
+    }
+  }
 }
 
 function buildFence(){
@@ -662,7 +805,7 @@ function onWorld(m){
 
 function drawBoard(list){
   var sorted = list.slice().sort(function(a,b){ return b.c - a.c; }).slice(0, 6);
-  var html = '<div style="color:var(--muted);margin-bottom:4px">In the park (' + list.length + ')</div>';
+  var html = '<div class="hd">In the park (' + list.length + ')</div>';
   for (var i = 0; i < sorted.length; i++){
     var p = sorted[i];
     html += '<div class="row' + (p.i === myId ? ' me' : '') + '"><span>' +
