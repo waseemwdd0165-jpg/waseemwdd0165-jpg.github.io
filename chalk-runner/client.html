@@ -175,9 +175,16 @@ ul.list li:first-child{border-top:0}
 #pad button:active{background:rgba(244,243,233,.3)}
 #leap{
   width:92px;height:92px;border-color:var(--warn);color:var(--warn);
-  background:rgba(240,166,92,.14);animation:ready 1.6s ease-in-out infinite;
+  background:rgba(245,185,115,.16);animation:ready 1.6s ease-in-out infinite;
 }
 #leap small{font:700 19px "Caveat",cursive;line-height:1}
+/* the runner's one say in the pace */
+#brake{
+  width:82px;height:82px;border-color:rgba(159,215,154,.55);color:var(--good);
+  background:rgba(159,215,154,.12);font-size:13px;
+}
+#brake small{font:700 17px "Caveat",cursive;line-height:1;min-height:17px}
+#brake.cooling{opacity:.4;border-color:var(--line);color:var(--dim);background:rgba(0,0,0,.2)}
 @keyframes ready{
   0%,100%{box-shadow:0 0 0 0 rgba(240,166,92,.32)}
   50%{box-shadow:0 0 0 12px rgba(240,166,92,0)}
@@ -285,13 +292,24 @@ ul.list li:first-child{border-top:0}
       <h2>How to play</h2>
       <p>Drag anywhere to lay chalk and it becomes real ground. You can only draw
       near the runner and the chalk runs out, so you are always one line behind.</p>
+      <p>Three things get in the way. A <b>wall</b> has to be got over, so build a
+      ramp. A <b>hanging block</b> has to be got under, so keep the road low. And
+      in a red <b>no chalk</b> band nothing sticks at all, so the runner has to
+      jump it. Everyone in the room gets the same level.</p>
       <p>Every 50 metres the runner speeds up. Every 100 they bank a leap, a huge
-      floating jump that buys the drawer a breath. Four rounds, roles swap, the
-      score is metres.</p>
+      floating jump. The runner also has SLOW: one second at half pace, on a six
+      second cooldown, which is the runner's one say in how hard the drawer's
+      life is. Four rounds, roles swap, the score is metres.</p>
+      <p>If somebody's connection drops, the whole round stops and waits
+      twenty five seconds for them.</p>
       <p>The record stands on the board as a red line out ahead of you. Run past it.</p>
     </div>
     <div id="sheet-top" class="hidden">
-      <h2>Furthest runs</h2>
+      <h2>Today's board</h2>
+      <p style="font-size:12.5px;margin-bottom:6px">Everybody gets the same level today.
+      Tomorrow it changes and this list starts again.</p>
+      <ul class="list" id="day-list"><li><span class="tag2">loading</span></li></ul>
+      <h2 style="margin-top:18px">All time</h2>
       <ul class="list" id="top-list"><li><span class="tag2">loading</span></li></ul>
     </div>
     <button class="ghost" id="sheet-x">Close</button>
@@ -319,6 +337,7 @@ ul.list li:first-child{border-top:0}
 </div>
 
 <div id="pad">
+  <button id="brake">SLOW<small id="brake-n"></small></button>
   <button id="leap" class="hidden">LEAP<small id="leap-n">0</small></button>
   <button id="jump">JUMP</button>
 </div>
@@ -344,6 +363,7 @@ var SEND_BACK = 55, SEND_FWD = 60;
    left. It used to be 700ms, which was long enough for the round trip and not
    long enough to look like anything but a line vanishing. */
 var LOCAL_SOLID = 1200, LOCAL_FADE = 900;
+var WALL_W = 0.9, ROOF_W = 2.6;
 
 var $ = function(id){ return document.getElementById(id); };
 var esc = function(s){ return String(s).replace(/[&<>"]/g, function(c){
@@ -420,6 +440,7 @@ var sfx = {
   leap:  function(){ tone(300, 1100, 0.45, 0.11, 'sine'); },
   land:  function(){ noise(0.09, 190, 0.09); },
   level: function(){ tone(700, 1050, 0.2, 0.07, 'square'); },
+  brake: function(){ tone(520, 220, 0.3, 0.07, 'sawtooth'); noise(0.22, 900, 0.05); },
   die:   function(){ tone(260, 70, 0.55, 0.13, 'sawtooth'); noise(0.3, 500, 0.08); },
   tick:  function(){ tone(900, 900, 0.07, 0.05, 'sine'); }
 };
@@ -516,7 +537,7 @@ $('btn-music').onclick = function(){
 };
 
 /* ---------- state ---------- */
-var ws = null, myId = null, code = '', myName = '';
+var ws = null, myId = null, myKey = '', code = '', myName = '';
 var view = null, role = 'drawer';
 var cam = { x: 0, y: 0 }, camReady = false;
 var smooth = null;                 /* the eased runner position */
@@ -550,7 +571,7 @@ function connect(rc, name, create, solo){
 
   ws.onopen = function(){
     settled = true; clearTimeout(giveUp);
-    ws.send(JSON.stringify({ t:'join', name:name, create: !!create }));
+    ws.send(JSON.stringify({ t:'join', name:name, create: !!create, key: myKey || undefined }));
   };
   ws.onmessage = function(e){
     var m; try { m = JSON.parse(e.data); } catch(_){ return; }
@@ -562,7 +583,59 @@ function connect(rc, name, create, solo){
     btn.disabled = false; btn.textContent = label;
     joinErr('Could not reach the server.');
   };
-  ws.onclose = function(){ if (settled) status('Disconnected. Reload to come back.'); };
+  ws.onclose = function(){ if (settled) lostConnection(); };
+}
+
+/* ==========================================================================
+   Coming back
+
+   A phone that locks, a train tunnel, a tab the browser puts to sleep. The
+   seat is held for twenty five seconds on the server, so this just keeps
+   trying, and says so, rather than telling somebody to reload.
+   ========================================================================== */
+var retryAt = 0, retries = 0, retryTimer = null;
+
+function seatStore(save){
+  try {
+    if (save) localStorage.setItem('cr.seat', JSON.stringify({ c:code, k:myKey, n:myName, at:Date.now() }));
+    else {
+      var raw = localStorage.getItem('cr.seat');
+      return raw ? JSON.parse(raw) : null;
+    }
+  } catch(_){ return null; }
+}
+function forgetSeat(){ try { localStorage.removeItem('cr.seat'); } catch(_){} }
+
+function lostConnection(){
+  if (!myKey || !code){ status('Disconnected. Reload to come back.'); return; }
+  if (!retryAt) retryAt = Date.now();
+  if (Date.now() - retryAt > 26000){
+    forgetSeat();
+    status('You were away too long and lost the seat.');
+    banner('Disconnected', 'The board went on without you');
+    return;
+  }
+  retries++;
+  banner('Reconnecting', 'Hold on, your seat is being kept');
+  clearTimeout(retryTimer);
+  retryTimer = setTimeout(reopen, Math.min(2500, 400 * retries));
+}
+function reopen(){
+  var proto = location.protocol === 'https:' ? 'wss:' : 'ws:';
+  try { ws = new WebSocket(proto + '//' + location.host + '/api/ws?room=' + code); }
+  catch(_){ lostConnection(); return; }
+  ws.onopen = function(){ ws.send(JSON.stringify({ t:'join', name:myName, key:myKey })); };
+  ws.onmessage = function(e){
+    var m; try { m = JSON.parse(e.data); } catch(_){ return; }
+    onServer(m, { disabled:false, textContent:'' }, false, '');
+  };
+  ws.onerror = function(){};
+  ws.onclose = function(){ lostConnection(); };
+}
+function banner(big, small){
+  $('banner-big').textContent = big;
+  $('banner-small').textContent = small || '';
+  $('banner').style.display = 'block';
 }
 function resetButtons(){
   $('btn-create').disabled = false; $('btn-create').textContent = 'Start a board';
@@ -577,12 +650,23 @@ function onServer(m, btn, create, label){
     else { resetButtons(); joinErr('No free code found.'); }
     return;
   }
-  if (m.t === 'closed'){ resetButtons(); joinErr('That board has already started.'); showMenu('s-landing'); return; }
-  if (m.t === 'full'){   resetButtons(); joinErr('That board is full.');            showMenu('s-landing'); return; }
+  if (m.t === 'closed' || m.t === 'full'){
+    var wasBack = !!myKey;
+    myKey = ''; forgetSeat(); retryAt = 0;
+    resetButtons();
+    joinErr(wasBack ? 'You were away too long and lost your seat.'
+                    : (m.t === 'full' ? 'That board is full.' : 'That board has already started.'));
+    showMenu('s-landing');
+    return;
+  }
   if (m.t === 'you'){
-    myId = m.id; myName = m.name; resetButtons();
-    status(create ? 'Board open. Code ' + code : 'Connected to ' + code);
-    if (wantSolo) ws.send(JSON.stringify({ t:'solo' }));
+    myId = m.id; myName = m.name; myKey = m.key || myKey;
+    retryAt = 0; retries = 0;
+    seatStore(true);
+    resetButtons();
+    status(m.back ? 'Back in' : (create ? 'Board open. Code ' + code : 'Connected to ' + code));
+    if (m.back) $('banner').style.display = 'none';
+    if (wantSolo && !m.back) ws.send(JSON.stringify({ t:'solo' }));
     return;
   }
   if (m.t !== 'state') return;
@@ -624,6 +708,10 @@ function renderHud(m){
   $('leap').classList.toggle('hidden', leaps < 1);
   $('leap-n').textContent = leaps;
 
+  var cool = (r && r.bc) || 0;
+  $('brake').classList.toggle('cooling', cool > 0);
+  $('brake-n').textContent = cool > 0 ? cool : '';
+
   if (role === 'runner' && r){
     $('role').innerHTML = leaps
       ? 'Running &nbsp;<span id="lvl">' + leaps + ' leap' + (leaps > 1 ? 's' : '') + '</span>'
@@ -642,7 +730,11 @@ function renderHud(m){
   $('inkbar').firstElementChild.style.width = (pct * 100) + '%';
   $('inkbar').classList.toggle('low', pct < 0.25);
 
-  if (m.ph === 'result'){
+  if (m.held){
+    banner('Waiting for ' + m.held,
+           'Everything is paused. ' + m.hold + ' seconds before the round goes on without them.');
+    lastCd = 99;
+  } else if (m.ph === 'result'){
     $('banner-big').textContent = m.result;
     $('banner-small').textContent = m.solo ? 'Going again' : 'Next round in a moment';
     $('banner').style.display = 'block';
@@ -739,21 +831,25 @@ function renderRecord(rows){
 }
 
 /* ---------- the stored leaderboard ---------- */
-var topRows = [], recordBefore = 0, recordSeen = false;
+var topRows = [], dayRows = [], recordBefore = 0, recordSeen = false;
+function boardRows(rows, empty){
+  return rows.length
+    ? rows.map(function(p, i){
+        return '<li><span><span class="rank">' + (i+1) + '</span>' + esc(p.n) +
+               (p.w ? ' <span class="tag2">with ' + esc(p.w) + '</span>' : '') +
+               '</span><span class="metres">' + p.m + ' m</span></li>';
+      }).join('')
+    : '<li><span class="tag2">' + empty + '</span></li>';
+}
 function loadTop(into, after){
   fetch('/api/top', { cache:'no-store' }).then(function(r){ return r.json(); }).then(function(j){
-    var rows = (j.top || []).slice(0, 10);
-    topRows = rows;
-    if (after) after(rows);
+    topRows = (j.top || []).slice(0, 10);
+    dayRows = (j.day || []).slice(0, 10);
+    if (after) after(topRows);
     var el = $(into);
-    if (!el) return;
-    el.innerHTML = rows.length
-      ? rows.map(function(p, i){
-          return '<li><span><span class="rank">' + (i+1) + '</span>' + esc(p.n) +
-                 (p.w ? ' <span class="tag2">with ' + esc(p.w) + '</span>' : '') +
-                 '</span><span class="metres">' + p.m + ' m</span></li>';
-        }).join('')
-      : '<li><span class="tag2">nobody has run yet</span></li>';
+    if (el) el.innerHTML = boardRows(topRows, 'nobody has run yet');
+    var d = $('day-list');
+    if (d) d.innerHTML = boardRows(dayRows, 'nobody has run today');
   }).catch(function(){
     var el = $(into);
     if (el) el.innerHTML = '<li><span class="tag2">could not load</span></li>';
@@ -899,6 +995,7 @@ function frame(){
 
   paintBoard(ctx, VW, VH);
   drawMilestones(r);
+  drawPits();
   if (role === 'drawer') drawReach(r);
   var live = liveSegs();
   strokeChalk(ctx, chalkPath(live.solid, sx, sy), 11, 4.5);
@@ -915,6 +1012,7 @@ function frame(){
     strokeChalk(ctx, chalkPath(wet, sx, sy), 10, 4);
     ctx.restore();
   }
+  drawBlocks();
   drawRunner(r, smooth);
 
   /* footsteps, but only while actually on the ground and running */
@@ -960,6 +1058,78 @@ function drawMilestones(r){
   ctx.restore();
 }
 
+/* ==========================================================================
+   What is in the way
+
+   Three shapes, all drawn in chalk so they belong on the board: a wall to get
+   over, a hanging block to get under, and a band where chalk will not stick.
+   ========================================================================== */
+function hatch(x0, y0, x1, y1, gap, colour){
+  ctx.save();
+  ctx.beginPath(); ctx.rect(x0, y0, x1 - x0, y1 - y0); ctx.clip();
+  ctx.strokeStyle = colour; ctx.lineWidth = 1.6;
+  ctx.beginPath();
+  for (var x = x0 - (y1 - y0); x < x1; x += gap){
+    ctx.moveTo(x, y1); ctx.lineTo(x + (y1 - y0), y0);
+  }
+  ctx.stroke();
+  ctx.restore();
+}
+
+/* the pits go behind everything, because they are a hole in the board */
+function drawPits(){
+  var list = (view && view.o) || [];
+  for (var i = 0; i < list.length; i++){
+    var o = list[i];
+    if (o[0] !== 2) continue;
+    var x0 = sx(o[1]), x1 = sx(o[1] + o[2]);
+    if (x1 < -30 || x0 > VW + 30) continue;
+    ctx.save();
+    ctx.fillStyle = 'rgba(0,0,0,.22)';
+    ctx.fillRect(x0, 0, x1 - x0, VH);
+    hatch(x0, 0, x1, VH, 16, 'rgba(232,119,107,.20)');
+    ctx.strokeStyle = 'rgba(232,119,107,.55)';
+    ctx.lineWidth = 2; ctx.setLineDash([8, 7]);
+    ctx.beginPath();
+    ctx.moveTo(x0, 0); ctx.lineTo(x0, VH);
+    ctx.moveTo(x1, 0); ctx.lineTo(x1, VH);
+    ctx.stroke();
+    ctx.setLineDash([]);
+    if (x1 - x0 > 54){
+      ctx.font = '700 18px "Caveat", cursive';
+      ctx.fillStyle = 'rgba(232,119,107,.85)';
+      ctx.textAlign = 'center';
+      ctx.fillText('no chalk', (x0 + x1) / 2, VH * 0.3);
+    }
+    ctx.restore();
+  }
+}
+
+/* the solid things go on top of the chalk, because you can see them */
+function drawBlocks(){
+  var list = (view && view.o) || [];
+  ctx.save();
+  ctx.lineCap = 'square'; ctx.lineJoin = 'miter';
+  for (var i = 0; i < list.length; i++){
+    var o = list[i], x0, x1, y0, y1;
+    if (o[0] === 0){
+      x0 = sx(o[1]); x1 = sx(o[1] + WALL_W);
+      y0 = sy(o[2]); y1 = sy(-0.9);
+    } else if (o[0] === 1){
+      x0 = sx(o[1]); x1 = sx(o[1] + ROOF_W);
+      y0 = sy(o[2] + 3.4); y1 = sy(o[2]);
+    } else continue;
+    if (x1 < -30 || x0 > VW + 30) continue;
+    ctx.fillStyle = 'rgba(20,40,32,.55)';
+    ctx.fillRect(x0, y0, x1 - x0, y1 - y0);
+    hatch(x0, y0, x1, y1, 9, 'rgba(244,243,233,.34)');
+    ctx.strokeStyle = 'rgba(244,243,233,.92)';
+    ctx.lineWidth = 3;
+    ctx.strokeRect(x0, y0, x1 - x0, y1 - y0);
+  }
+  ctx.restore();
+}
+
 /* The drawer needs to see where the chalk works. When this was almost
    invisible people drew past the edge and watched the line disappear. */
 var nudgedAt = 0;
@@ -990,6 +1160,20 @@ function drawRunner(r, at){
   ctx.globalAlpha = r.a ? 1 : 0.32;
   ctx.lineCap = 'round';
   ctx.lineWidth = Math.max(2.4, s * 0.072);
+
+  /* braking: heels dug in, and a scuff of chalk dust behind */
+  if (r.bk){
+    ctx.strokeStyle = 'rgba(159,215,154,.55)';
+    ctx.lineWidth = Math.max(2.6, s * 0.08);
+    ctx.beginPath();
+    for (var b = 1; b <= 3; b++){
+      ctx.moveTo(-s * (0.18 + b * 0.14), s * 0.34);
+      ctx.lineTo(-s * (0.02 + b * 0.14), s * 0.30 - b * 2);
+    }
+    ctx.stroke();
+    ctx.lineWidth = Math.max(2.4, s * 0.072);
+    ctx.rotate(-0.16);
+  }
 
   if (r.fl){
     ctx.strokeStyle = 'rgba(240,166,92,.45)';
@@ -1084,6 +1268,10 @@ function sendLeap(){
   if (view && view.r && !view.r.lp) return;
   if (ws && ws.readyState === 1){ ws.send(JSON.stringify({ t:'leap' })); sfx.leap(); buzz([22, 40, 22]); }
 }
+function sendBrake(){
+  if (view && view.r && view.r.bc > 0) return;
+  if (ws && ws.readyState === 1){ ws.send(JSON.stringify({ t:'brake' })); sfx.brake(); buzz(18); }
+}
 
 var drawing = false, penId = null, lastSent = 0;
 function flush(force){
@@ -1114,11 +1302,19 @@ cv.addEventListener('pointerdown', function(e){
 /* A point the server is going to throw away should never be drawn here either,
    or the line appears and then goes. The back edge is pulled in by a metre and
    a half because the runner keeps moving while the message is in flight. */
+function inPit(x){
+  var list = (view && view.o) || [];
+  for (var i = 0; i < list.length; i++){
+    if (list[i][0] === 2 && x > list[i][1] && x < list[i][1] + list[i][2]) return true;
+  }
+  return false;
+}
 function inReach(x, y){
   var r = view && view.r;
   if (!r) return true;
   if (x < r.x - REACH_BACK + 1.5 || x > r.x + REACH_FWD - 0.5) return false;
   if (y < r.y - REACH_DOWN + 0.5 || y > r.y + REACH_UP - 0.5) return false;
+  if (inPit(x)) return false;
   return true;
 }
 function penTo(x, y){
@@ -1162,11 +1358,13 @@ cv.addEventListener('pointercancel', penUp);
 
 $('jump').addEventListener('pointerdown', function(e){ e.preventDefault(); e.stopPropagation(); sendJump(); });
 $('leap').addEventListener('pointerdown', function(e){ e.preventDefault(); e.stopPropagation(); sendLeap(); });
+$('brake').addEventListener('pointerdown', function(e){ e.preventDefault(); e.stopPropagation(); sendBrake(); });
 addEventListener('keydown', function(e){
   if (e.target && e.target.tagName === 'INPUT') return;
   var k = e.key;
   if (k === ' ' || k === 'ArrowUp' || k === 'w' || k === 'W'){ sendJump(); e.preventDefault(); }
   if (k === 'Shift' || k === 'l' || k === 'L'){ sendLeap(); e.preventDefault(); }
+  if (k === 'ArrowDown' || k === 's' || k === 'S'){ sendBrake(); e.preventDefault(); }
 });
 
 /* ---------- wiring ---------- */
@@ -1218,6 +1416,18 @@ $('lobby-code').addEventListener('click', function(){
 
 var pre = location.search.match(/room=([A-Za-z]{4})/);
 if (pre){ $('join-code').value = pre[1].toUpperCase(); $('host-name').focus(); }
+
+/* A reload is the other way people vanish, and the seat is held for the same
+   twenty five seconds, so walk straight back in rather than showing the gate. */
+(function(){
+  var seat = seatStore();
+  if (!seat || !seat.k || !seat.c) return;
+  if (Date.now() - seat.at > 30000){ forgetSeat(); return; }
+  code = seat.c; myKey = seat.k; myName = seat.n || 'Player';
+  $('host-name').value = myName;
+  status('Going back to ' + code);
+  reopen();
+})();
 </script>
 </body>
 </html>

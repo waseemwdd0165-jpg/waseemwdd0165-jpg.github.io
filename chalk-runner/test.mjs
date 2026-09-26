@@ -11,10 +11,12 @@
    ========================================================================== */
 
 import { Board, stepRunner, newRunner, segDistance, withinReach,
-         speedAt, levelAt, nextMilestone, botStroke, leapsEarned, roomCode,
+         speedAt, levelAt, nextMilestone, botStroke, botTargetY, leapsEarned, roomCode, pullBrake,
+         rng, makeLevel, hardSegs, inPit, daySeed, dayStamp, WALL_W, ROOF_W, OBS_FROM, STUCK_S,
          ROUNDS, INK_MAX, INK_REFILL, MIN_SEG, MAX_SEG, READY_MS, LEDGE_END,
          REACH_FWD, REACH_BACK, SPEED_START, SPEED_STEP, SPEED_EVERY, SPEED_MAX,
          LEAP_EVERY, LEAP_V, JUMP_V, FLOAT_S, IDLE_MS, TOP_N, TOP_ROOM,
+         BRAKE_S, BRAKE_MUL, BRAKE_CD, HOLD_MS,
          SEND_BACK, SEND_FWD, START_X, DEATH_Y, RUNNER_R }
   from './worker-single.js';
 
@@ -470,6 +472,16 @@ console.log('\nchalk runner\n');
   check('and it kept the best ones, not the newest',
         capped[0].m >= capped[capped.length - 1].m, JSON.stringify(capped.map(r => r.m)));
 
+  /* today's list keeps the same rows, separately, and empties itself tomorrow */
+  const today = await top.loadDay();
+  check('today has the same runs', today.length === (await top.loadTop()).length,
+        today.length);
+  await top.state.storage.put('day', { on:'2020-01-01', rows:[{ n:'Old', m:9, w:'' }] });
+  top.day = null; top.dayOf = '';
+  const tomorrow = await top.loadDay();
+  check('and tomorrow it starts again', tomorrow.length === 0, tomorrow.length);
+  check('but all time is untouched', (await top.loadTop()).length === TOP_N);
+
   /* it survives the object being thrown away and rebuilt on the same storage */
   const kept = top.top;
   top.top = null;
@@ -508,14 +520,306 @@ console.log('\nchalk runner\n');
         (await env3.BOARD.get(TOP_ROOM).loadTop()).length === 0);
 }
 
+
+
+/* ---------- the level ----------------------------------------------------------
+   Everything in the way comes out of one number, so the same seed has to give
+   the same board to both people, and a different seed a different one.
+   ---------------------------------------------------------------------------- */
+{
+  const a = makeLevel(12345), b = makeLevel(12345), c = makeLevel(999);
+  check('a seed gives the same level twice', JSON.stringify(a) === JSON.stringify(b));
+  check('and a different seed a different one', JSON.stringify(a) !== JSON.stringify(c));
+  check('there is something to run into', a.length > 40, a.length);
+  check('the start is left clear', a.every(o => o.x >= OBS_FROM), a[0].x);
+  check('they are in order', a.every((o, i) => i === 0 || o.x > a[i-1].x));
+  check('and never on top of each other',
+        a.every((o, i) => i === 0 || o.x - a[i-1].x > 12),
+        Math.min(...a.slice(1).map((o, i) => o.x - a[i].x)).toFixed(1));
+  check('all three kinds turn up',
+        [0,1,2].every(k => a.some(o => o.k === k)),
+        JSON.stringify([0,1,2].map(k => a.filter(o => o.k === k).length)));
+
+  const walls = a.filter(o => o.k === 0);
+  check('a wall is low enough to ramp over', walls.every(o => o.h < 3.2),
+        Math.max(...walls.map(o => o.h)));
+  const roofs = a.filter(o => o.k === 1);
+  check('a hanging block leaves room to run under', roofs.every(o => o.y > 2.6),
+        Math.min(...roofs.map(o => o.y)));
+
+  /* A pit has to be jumpable at the speed you will be doing when you meet it,
+     or it is not an obstacle, it is a wall with extra steps. */
+  const air = 2 * JUMP_V / 26;
+  const pits = a.filter(o => o.k === 2);
+  check('every pit can be cleared by a plain jump at that point',
+        pits.every(o => o.w + 0.8 < speedAt(o.x) * air),
+        JSON.stringify(pits.slice(0, 3).map(o =>
+          o.w.toFixed(1) + '/' + (speedAt(o.x) * air).toFixed(1))));
+
+  /* they get closer together */
+  const early = a.filter(o => o.x < 300), late = a.filter(o => o.x > 1500 && o.x < 1800);
+  const spread = list => (list[list.length-1].x - list[0].x) / (list.length - 1);
+  check('and they crowd in as it goes on', spread(late) < spread(early),
+        spread(early).toFixed(1) + ' then ' + spread(late).toFixed(1));
+
+  check('the generator is a real generator, not a constant',
+        (function(){ const f = rng(7); const v = [f(), f(), f()];
+          return new Set(v).size === 3 && v.every(x => x >= 0 && x < 1); })());
+  check('and the same seed replays', (function(){
+    const p = rng(7), q = rng(7); return p() === q() && p() === q(); })());
+}
+
+/* ---------- walls and roofs are real ------------------------------------------- */
+{
+  const wall = [{ k:0, x:20, h:2.0 }];
+  const hard = hardSegs(wall);
+  check('a wall becomes segments', hard.length === 3, hard.length);
+
+  const r = newRunner();
+  const ground = [floor(-2, 400, 1.2)];
+  for (let i = 0; i < 900 && r.alive; i++) stepRunner(r, ground, 1/30, undefined, hard);
+  check('a wall stops the runner', !r.alive);
+  check('and it stops them at the wall', r.x > 18 && r.x < 21.5, r.x.toFixed(2));
+  check('it was being blocked, not a fall', r.y > 0, r.y.toFixed(2));
+
+  /* a ramp over it works */
+  const r2 = newRunner();
+  const ramped = [floor(-2, 15, 1.2), { x1:15, y1:1.2, x2:19.6, y2:2.5 },
+                  floor(19.6, 400, 2.5)];
+  for (let i = 0; i < 900 && r2.alive; i++) stepRunner(r2, ramped, 1/30, undefined, hard);
+  check('a ramp gets them over it', r2.alive && r2.x > 40, r2.x.toFixed(1));
+
+  /* and a road that is too high meets the hanging block */
+  const roof = hardSegs([{ k:1, x:30, y:3.2 }]);
+  const high = [floor(-2, 400, 3.0)];
+  const r3 = newRunner();
+  r3.y = 4;
+  for (let i = 0; i < 900 && r3.alive; i++) stepRunner(r3, high, 1/30, undefined, roof);
+  check('a road built too high runs into the hanging block', !r3.alive, r3.x.toFixed(1));
+
+  const low = [floor(-2, 400, 1.2)];
+  const r4 = newRunner();
+  for (let i = 0; i < 900 && r4.alive; i++) stepRunner(r4, low, 1/30, undefined, roof);
+  check('a low road goes under it', r4.alive && r4.x > 60, r4.x.toFixed(1));
+
+  check('nothing gets stuck on an empty board',
+        (function(){ const q = newRunner();
+          for (let i = 0; i < 20; i++) stepRunner(q, [floor(-2,400,1.2)], 1/30);
+          return q.stuck === 0; })());
+  check('and a third of a second of nothing is a crash', STUCK_S < 0.5, STUCK_S);
+}
+
+/* ---------- chalk does not stick in a pit -------------------------------------- */
+{
+  const obs = [{ k:2, x:20, w:4 }];
+  check('inside a pit is inside', inPit(obs, 22));
+  check('the near edge is out', !inPit(obs, 19.9));
+  check('the far edge is out', !inPit(obs, 24.1));
+  check('a wall is not a pit', !inPit([{ k:0, x:20, h:2 }], 20.4));
+
+  const b = newBoard();
+  const host = join(b, 'A'); join(b, 'B');
+  b.onMessage(host, { t:'start' });
+  const drawer = b.players.find(p => p.role === 'drawer');
+  b.obs = [{ k:2, x:6, w:4 }];
+  const n = b.segs.length;
+  b.onMessage(drawer.ws, { t:'draw', pts: [6.5,1.2, 7,1.2, 7.5,1.2] });
+  check('a stroke inside a pit is refused', b.segs.length === n, b.segs.length);
+  b.onMessage(drawer.ws, { t:'draw', pts: [12,1.2, 12.5,1.2, 13,1.2] });
+  check('but just past it is fine', b.segs.length > n);
+
+  /* the bot knows about all of it too */
+  const runner = newRunner(); runner.x = 20;
+  check('the bot leaves a pit alone', botTargetY([{ k:2, x:22, w:4 }], 23) === null);
+  check('the bot ramps up to a wall',
+        botTargetY([{ k:0, x:26, h:2 }], 24) > 1.2, botTargetY([{ k:0, x:26, h:2 }], 24));
+  check('and clears the top of it',
+        botTargetY([{ k:0, x:26, h:2 }], 26.4) > 2, botTargetY([{ k:0, x:26, h:2 }], 26.4));
+  check('the bot ducks under a hanging block',
+        botTargetY([{ k:1, x:22, y:3.2 }], 23) < 2.2, botTargetY([{ k:1, x:22, y:3.2 }], 23));
+}
+
+/* ---------- the board of the day ------------------------------------------------ */
+{
+  const monday = Date.UTC(2026, 8, 28, 3, 0, 0);
+  const alsoMonday = Date.UTC(2026, 8, 28, 22, 40, 0);
+  const tuesday = Date.UTC(2026, 8, 29, 3, 0, 0);
+  check('the seed is the same all day', daySeed(monday) === daySeed(alsoMonday));
+  check('and different tomorrow', daySeed(monday) !== daySeed(tuesday));
+  check('the stamp reads as a date', dayStamp(monday) === '2026-09-28', dayStamp(monday));
+  check('the same level comes back from it',
+        JSON.stringify(makeLevel(daySeed(monday))) ===
+        JSON.stringify(makeLevel(daySeed(alsoMonday))));
+}
+
+/* ---------- both people see the same level -------------------------------------- */
+{
+  const b = newBoard();
+  const host = join(b, 'A'); const guest = join(b, 'B');
+  b.onMessage(host, { t:'start' });
+  check('a round has a level', b.obs.length > 0, b.obs.length);
+  const s1 = b.sliceFor(b.players[0]), s2 = b.sliceFor(b.players[1]);
+  check('and the two players are sent the same obstacles',
+        JSON.stringify(s1.o) === JSON.stringify(s2.o));
+  check('only the ones nearby are sent', s1.o.length < b.obs.length, s1.o.length);
+  void guest;
+
+  const first = JSON.stringify(b.obs);
+  b.runner.dist = 5; b.runner.alive = false;
+  b.lastTick = Date.now() - 33; b.tick();
+  flush();
+  check('the next round is a different level', JSON.stringify(b.obs) !== first);
+}
+
+/* ---------- the brake ---------------------------------------------------------
+   The runner's only say in the pace, so it has to actually slow them and it
+   has to run out.
+   ------------------------------------------------------------------------- */
+{
+  const r = newRunner();
+  check('a fresh runner can brake', pullBrake(r) === true);
+  check('and it is on', r.brake === BRAKE_S, r.brake);
+  check('but not twice in a row', pullBrake(r) === false);
+
+  const floor2 = [floor(-2, 100000, 1.2)];
+  function ran(braking){
+    const q = newRunner();
+    for (let i = 0; i < 40; i++) stepRunner(q, floor2, 1/30);   /* settle onto the line */
+    if (braking) pullBrake(q);
+    const x0 = q.x;
+    for (let i = 0; i < 15; i++) stepRunner(q, floor2, 1/30);   /* half a second */
+    return q.x - x0;
+  }
+  const slow = ran(true), full = ran(false);
+  check('braking really is slower', slow < full * 0.7, slow.toFixed(2) + ' vs ' + full.toFixed(2));
+  check('and it is about the fraction it claims',
+        Math.abs(slow / full - BRAKE_MUL) < 0.06, (slow / full).toFixed(3));
+
+  /* it wears off, and then you have to wait */
+  /* on solid ground, or the runner dies and the timers stop with them */
+  const q = newRunner();
+  pullBrake(q);
+  for (let i = 0; i < Math.ceil(BRAKE_S * 30) + 2; i++) stepRunner(q, floor2, 1/30);
+  check('the brake wears off', q.brake === 0, q.brake);
+  check('but the cooldown is still running', q.cd > 0, q.cd.toFixed(2));
+  check('so you cannot brake again yet', pullBrake(q) === false);
+  for (let i = 0; i < Math.ceil(BRAKE_CD * 30) + 2; i++) stepRunner(q, floor2, 1/30);
+  check('once it clears you can brake again', pullBrake(q) === true);
+
+  check('a dead runner cannot brake',
+        (function(){ const d = newRunner(); d.alive = false; return pullBrake(d) === false; })());
+
+  const b = newBoard();
+  const host = join(b, 'A'); join(b, 'B');
+  b.onMessage(host, { t:'start' });
+  const runner = b.players.find(p => p.role === 'runner');
+  const drawer = b.players.find(p => p.role === 'drawer');
+  b.onMessage(drawer.ws, { t:'brake' });
+  check('the drawer cannot brake', b.runner.brake === 0, b.runner.brake);
+  b.onMessage(runner.ws, { t:'brake' });
+  check('the runner can', b.runner.brake > 0, b.runner.brake);
+  const slice = b.sliceFor(runner);
+  check('the brake is on the wire', slice.r.bk === 1, slice.r.bk);
+  check('and so is the cooldown', slice.r.bc > 0, slice.r.bc);
+}
+
+/* ---------- somebody's wifi ---------------------------------------------------
+   Losing a round to a train tunnel is the worst way to lose one.
+   ------------------------------------------------------------------------- */
+{
+  const b = newBoard();
+  const aSock = join(b, 'Ann'), bSock = join(b, 'Bob');
+  const key = last(aSock, 'you').key;
+  check('a seat comes with a key', typeof key === 'string' && key.length > 12, key);
+  check('and the two keys are different', key !== last(bSock, 'you').key);
+
+  b.onMessage(aSock, { t:'start' });
+  b.runAt = Date.now() - 1;
+  for (let i = 0; i < 20; i++){ b.lastTick = Date.now() - 33; b.tick(); }
+  const ranTo = b.runner.x;
+  check('the runner is moving', ranTo > START_X, ranTo.toFixed(2));
+
+  /* Ann goes into a tunnel */
+  b.onClose(aSock);
+  check('the seat is kept, not emptied', b.players.length === 2, b.players.length);
+  check('and the board knows who it is waiting for',
+        b.waitingFor() && b.waitingFor().name === 'Ann');
+
+  for (let i = 0; i < 30; i++){ b.lastTick = Date.now() - 33; b.tick(); }
+  check('everything holds still while it waits',
+        Math.abs(b.runner.x - ranTo) < 0.001, b.runner.x);
+  check('the other player is told', last(bSock, 'state').held === 'Ann');
+  check('and told how long', last(bSock, 'state').hold > 0, last(bSock, 'state').hold);
+  check('the roster marks them away',
+        last(bSock, 'state').roster.find(o => o.n === 'Ann').off === 1);
+
+  /* Ann comes back on a new socket with the same key */
+  const again = sock();
+  b.onMessage(again, { t:'join', name:'Ann', key });
+  check('the key gets her seat back', !!last(again, 'you') && last(again, 'you').back === true);
+  check('with the same player id', last(again, 'you').id === 'p1', last(again, 'you').id);
+  check('nobody was added', b.players.length === 2, b.players.length);
+  check('and the wait is over', !b.waitingFor());
+
+  b.lastTick = Date.now() - 33; b.tick();
+  check('the round carries on', b.runner.x > ranTo, b.runner.x.toFixed(2));
+
+  /* a key nobody holds is just a stranger at a closed door */
+  const stranger = sock();
+  b.onMessage(stranger, { t:'join', name:'Nope', key:'not-a-real-key' });
+  check('a made up key does not open a seat', !!last(stranger, 'closed'));
+  check('and it did not add anyone', b.players.length === 2);
+}
+
+/* the wait does run out */
+{
+  const b = newBoard();
+  const aSock = join(b, 'Ann'), bSock = join(b, 'Bob');
+  b.onMessage(aSock, { t:'start' });          /* Ann runs */
+  b.runAt = Date.now() - 1;
+  b.lastTick = Date.now() - 33; b.tick();
+
+  b.onClose(aSock);
+  b.players.find(p => p.name === 'Ann').gone = Date.now() - (HOLD_MS + 500);
+  b.lastTick = Date.now() - 33; b.tick();
+  check('after the wait they are dropped', b.players.length === 1, b.players.length);
+  check('and the round ends because the runner is gone', b.phase === 'result', b.phase);
+  check('with a reason', /left/.test(b.result), b.result);
+  void bSock;
+
+  /* the drawer leaving is survivable */
+  const b2 = newBoard();
+  const x = join(b2, 'X'), y = join(b2, 'Y');
+  b2.onMessage(x, { t:'start' });
+  b2.runAt = Date.now() - 1;
+  const drawer = b2.players.find(p => p.role === 'drawer');
+  b2.onClose(drawer.ws);
+  drawer.gone = Date.now() - (HOLD_MS + 500);
+  b2.lastTick = Date.now() - 33; b2.tick();
+  check('a drawer who never comes back is dropped', b2.players.length === 1);
+  check('but the round is still going', b2.phase === 'play', b2.phase);
+  void y;
+
+  /* in the lobby there is nothing to hold */
+  const b3 = newBoard();
+  const l1 = join(b3, 'L1'); join(b3, 'L2');
+  b3.onClose(l1);
+  check('leaving the lobby just leaves', b3.players.length === 1, b3.players.length);
+}
+
 /* ---------- people leaving ------------------------------------------------------ */
 {
+  /* Walking out now looks exactly like a tunnel, because from here it does.
+     The round only ends once the wait is over. */
   const b = newBoard();
   const a = join(b, 'A'), c = join(b, 'B');
   b.onMessage(a, { t:'start' });
   const runner = b.players.find(p => p.role === 'runner');
   b.onClose(runner.ws);
-  check('the round ends if the runner walks out', b.phase === 'result', b.phase);
+  check('the round does not end the moment the runner drops', b.phase === 'play', b.phase);
+  runner.gone = Date.now() - (HOLD_MS + 500);
+  b.lastTick = Date.now() - 33; b.tick();
+  check('but it ends once the wait is up', b.phase === 'result', b.phase);
   check('and it says so', /left/.test(b.result), b.result);
   void c;
 

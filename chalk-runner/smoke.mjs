@@ -36,6 +36,8 @@ ctx.sheet('top');
 await new Promise(r=>setTimeout(r,120));
 ok('the record list loads into its sheet', /312/.test(E('top-list').innerHTML), E('top-list').innerHTML.slice(0,80));
 ok('the sheet opens', !E('sheet').classList.contains('hidden'));
+ok("today's board is separate", /Eve/.test(E('day-list').innerHTML) && !/Eve/.test(E('top-list').innerHTML),
+   E('day-list').innerHTML.slice(0,70));
 ctx.sheet(null);
 ok('and closes again', E('sheet').classList.contains('hidden'));
 
@@ -43,7 +45,7 @@ function base(o){
   return Object.assign({ t:'state', ph:'play', round:0, rounds:4, host:true, role:'drawer',
     solo:false, ink:20, inkMax:34, result:'', cd:0,
     roster:[{i:'p1',n:'Ann',s:0,b:0,r:'runner'},{i:'p2',n:'Bob',s:0,b:0,r:'drawer'}],
-    r:{ x:5, y:1.56, g:1, a:1, d:0, lp:0, fl:0, lv:1, ms:50, sp:4.6 },
+    r:{ x:5, y:1.56, g:1, a:1, d:0, lp:0, fl:0, bk:0, bc:0, lv:1, ms:50, sp:4.6 },
     s:[[-1,1.2,13,1.2]] }, o);
 }
 const S = ctx.onServer, btn = { disabled:false, textContent:'' };
@@ -62,7 +64,17 @@ ok('the board is showing', E('gate').classList.contains('hidden'));
 ok('the chalk bar is on for a drawer', !E('inkwrap').classList.contains('hidden'));
 ok('the pad is hidden for a drawer', E('pad').style.display === 'none');
 
-S(base({ role:'runner', r:{ x:160, y:2.1, g:1, a:1, d:155, lp:1, fl:0, lv:4, ms:200, sp:5.86 } }), btn, true, '');
+/* obstacles: they must render without throwing, and block the chalk */
+S(base({ o: [[0, 20, 2.1], [1, 40, 3.3], [2, 60, 3.4]] }), btn, true, '');
+await new Promise(r=>setTimeout(r,120));
+ok('a board with obstacles still draws', true);
+ok('chalk is refused inside a pit', ctx.inPit(61) === true);
+ok('and allowed outside one', ctx.inPit(58) === false);
+ctx.pending = [];
+ctx.penTo(61, 1.2);
+ok('so the drawer cannot even start a line there', ctx.pending.length === 0, ctx.pending.length);
+
+S(base({ role:'runner', r:{ x:160, y:2.1, g:1, a:1, d:155, lp:1, fl:0, bk:0, bc:0, lv:4, ms:200, sp:5.86 } }), btn, true, '');
 await new Promise(r=>setTimeout(r,120));
 ok('the distance shows', E('dist').textContent === '155 m', E('dist').textContent);
 ok('the leap button appears', !E('leap').classList.contains('hidden'));
@@ -72,7 +84,7 @@ ok('the pad is on for a runner', E('pad').style.display === 'flex');
 ok('the music started', ctx.music.playing());
 
 S(base({ role:'runner', ph:'result', result:'155 metres',
-  r:{ x:160, y:-7, g:0, a:0, d:155, lp:1, fl:0, lv:4, ms:200, sp:5.86 } }), btn, true, '');
+  r:{ x:160, y:-7, g:0, a:0, d:155, lp:1, fl:0, bk:0, bc:0, lv:4, ms:200, sp:5.86 } }), btn, true, '');
 await new Promise(r=>setTimeout(r,80));
 ok('the result banner shows the metres', /155/.test(E('banner-big').textContent), E('banner-big').textContent);
 ok('the music stopped when they fell', !ctx.music.playing());

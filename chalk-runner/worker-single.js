@@ -182,9 +182,16 @@ ul.list li:first-child{border-top:0}
 #pad button:active{background:rgba(244,243,233,.3)}
 #leap{
   width:92px;height:92px;border-color:var(--warn);color:var(--warn);
-  background:rgba(240,166,92,.14);animation:ready 1.6s ease-in-out infinite;
+  background:rgba(245,185,115,.16);animation:ready 1.6s ease-in-out infinite;
 }
 #leap small{font:700 19px "Caveat",cursive;line-height:1}
+/* the runner's one say in the pace */
+#brake{
+  width:82px;height:82px;border-color:rgba(159,215,154,.55);color:var(--good);
+  background:rgba(159,215,154,.12);font-size:13px;
+}
+#brake small{font:700 17px "Caveat",cursive;line-height:1;min-height:17px}
+#brake.cooling{opacity:.4;border-color:var(--line);color:var(--dim);background:rgba(0,0,0,.2)}
 @keyframes ready{
   0%,100%{box-shadow:0 0 0 0 rgba(240,166,92,.32)}
   50%{box-shadow:0 0 0 12px rgba(240,166,92,0)}
@@ -292,13 +299,24 @@ ul.list li:first-child{border-top:0}
       <h2>How to play</h2>
       <p>Drag anywhere to lay chalk and it becomes real ground. You can only draw
       near the runner and the chalk runs out, so you are always one line behind.</p>
+      <p>Three things get in the way. A <b>wall</b> has to be got over, so build a
+      ramp. A <b>hanging block</b> has to be got under, so keep the road low. And
+      in a red <b>no chalk</b> band nothing sticks at all, so the runner has to
+      jump it. Everyone in the room gets the same level.</p>
       <p>Every 50 metres the runner speeds up. Every 100 they bank a leap, a huge
-      floating jump that buys the drawer a breath. Four rounds, roles swap, the
-      score is metres.</p>
+      floating jump. The runner also has SLOW: one second at half pace, on a six
+      second cooldown, which is the runner's one say in how hard the drawer's
+      life is. Four rounds, roles swap, the score is metres.</p>
+      <p>If somebody's connection drops, the whole round stops and waits
+      twenty five seconds for them.</p>
       <p>The record stands on the board as a red line out ahead of you. Run past it.</p>
     </div>
     <div id="sheet-top" class="hidden">
-      <h2>Furthest runs</h2>
+      <h2>Today's board</h2>
+      <p style="font-size:12.5px;margin-bottom:6px">Everybody gets the same level today.
+      Tomorrow it changes and this list starts again.</p>
+      <ul class="list" id="day-list"><li><span class="tag2">loading</span></li></ul>
+      <h2 style="margin-top:18px">All time</h2>
       <ul class="list" id="top-list"><li><span class="tag2">loading</span></li></ul>
     </div>
     <button class="ghost" id="sheet-x">Close</button>
@@ -326,6 +344,7 @@ ul.list li:first-child{border-top:0}
 </div>
 
 <div id="pad">
+  <button id="brake">SLOW<small id="brake-n"></small></button>
   <button id="leap" class="hidden">LEAP<small id="leap-n">0</small></button>
   <button id="jump">JUMP</button>
 </div>
@@ -351,6 +370,7 @@ var SEND_BACK = 55, SEND_FWD = 60;
    left. It used to be 700ms, which was long enough for the round trip and not
    long enough to look like anything but a line vanishing. */
 var LOCAL_SOLID = 1200, LOCAL_FADE = 900;
+var WALL_W = 0.9, ROOF_W = 2.6;
 
 var $ = function(id){ return document.getElementById(id); };
 var esc = function(s){ return String(s).replace(/[&<>"]/g, function(c){
@@ -427,6 +447,7 @@ var sfx = {
   leap:  function(){ tone(300, 1100, 0.45, 0.11, 'sine'); },
   land:  function(){ noise(0.09, 190, 0.09); },
   level: function(){ tone(700, 1050, 0.2, 0.07, 'square'); },
+  brake: function(){ tone(520, 220, 0.3, 0.07, 'sawtooth'); noise(0.22, 900, 0.05); },
   die:   function(){ tone(260, 70, 0.55, 0.13, 'sawtooth'); noise(0.3, 500, 0.08); },
   tick:  function(){ tone(900, 900, 0.07, 0.05, 'sine'); }
 };
@@ -523,7 +544,7 @@ $('btn-music').onclick = function(){
 };
 
 /* ---------- state ---------- */
-var ws = null, myId = null, code = '', myName = '';
+var ws = null, myId = null, myKey = '', code = '', myName = '';
 var view = null, role = 'drawer';
 var cam = { x: 0, y: 0 }, camReady = false;
 var smooth = null;                 /* the eased runner position */
@@ -557,7 +578,7 @@ function connect(rc, name, create, solo){
 
   ws.onopen = function(){
     settled = true; clearTimeout(giveUp);
-    ws.send(JSON.stringify({ t:'join', name:name, create: !!create }));
+    ws.send(JSON.stringify({ t:'join', name:name, create: !!create, key: myKey || undefined }));
   };
   ws.onmessage = function(e){
     var m; try { m = JSON.parse(e.data); } catch(_){ return; }
@@ -569,7 +590,59 @@ function connect(rc, name, create, solo){
     btn.disabled = false; btn.textContent = label;
     joinErr('Could not reach the server.');
   };
-  ws.onclose = function(){ if (settled) status('Disconnected. Reload to come back.'); };
+  ws.onclose = function(){ if (settled) lostConnection(); };
+}
+
+/* ==========================================================================
+   Coming back
+
+   A phone that locks, a train tunnel, a tab the browser puts to sleep. The
+   seat is held for twenty five seconds on the server, so this just keeps
+   trying, and says so, rather than telling somebody to reload.
+   ========================================================================== */
+var retryAt = 0, retries = 0, retryTimer = null;
+
+function seatStore(save){
+  try {
+    if (save) localStorage.setItem('cr.seat', JSON.stringify({ c:code, k:myKey, n:myName, at:Date.now() }));
+    else {
+      var raw = localStorage.getItem('cr.seat');
+      return raw ? JSON.parse(raw) : null;
+    }
+  } catch(_){ return null; }
+}
+function forgetSeat(){ try { localStorage.removeItem('cr.seat'); } catch(_){} }
+
+function lostConnection(){
+  if (!myKey || !code){ status('Disconnected. Reload to come back.'); return; }
+  if (!retryAt) retryAt = Date.now();
+  if (Date.now() - retryAt > 26000){
+    forgetSeat();
+    status('You were away too long and lost the seat.');
+    banner('Disconnected', 'The board went on without you');
+    return;
+  }
+  retries++;
+  banner('Reconnecting', 'Hold on, your seat is being kept');
+  clearTimeout(retryTimer);
+  retryTimer = setTimeout(reopen, Math.min(2500, 400 * retries));
+}
+function reopen(){
+  var proto = location.protocol === 'https:' ? 'wss:' : 'ws:';
+  try { ws = new WebSocket(proto + '//' + location.host + '/api/ws?room=' + code); }
+  catch(_){ lostConnection(); return; }
+  ws.onopen = function(){ ws.send(JSON.stringify({ t:'join', name:myName, key:myKey })); };
+  ws.onmessage = function(e){
+    var m; try { m = JSON.parse(e.data); } catch(_){ return; }
+    onServer(m, { disabled:false, textContent:'' }, false, '');
+  };
+  ws.onerror = function(){};
+  ws.onclose = function(){ lostConnection(); };
+}
+function banner(big, small){
+  $('banner-big').textContent = big;
+  $('banner-small').textContent = small || '';
+  $('banner').style.display = 'block';
 }
 function resetButtons(){
   $('btn-create').disabled = false; $('btn-create').textContent = 'Start a board';
@@ -584,12 +657,23 @@ function onServer(m, btn, create, label){
     else { resetButtons(); joinErr('No free code found.'); }
     return;
   }
-  if (m.t === 'closed'){ resetButtons(); joinErr('That board has already started.'); showMenu('s-landing'); return; }
-  if (m.t === 'full'){   resetButtons(); joinErr('That board is full.');            showMenu('s-landing'); return; }
+  if (m.t === 'closed' || m.t === 'full'){
+    var wasBack = !!myKey;
+    myKey = ''; forgetSeat(); retryAt = 0;
+    resetButtons();
+    joinErr(wasBack ? 'You were away too long and lost your seat.'
+                    : (m.t === 'full' ? 'That board is full.' : 'That board has already started.'));
+    showMenu('s-landing');
+    return;
+  }
   if (m.t === 'you'){
-    myId = m.id; myName = m.name; resetButtons();
-    status(create ? 'Board open. Code ' + code : 'Connected to ' + code);
-    if (wantSolo) ws.send(JSON.stringify({ t:'solo' }));
+    myId = m.id; myName = m.name; myKey = m.key || myKey;
+    retryAt = 0; retries = 0;
+    seatStore(true);
+    resetButtons();
+    status(m.back ? 'Back in' : (create ? 'Board open. Code ' + code : 'Connected to ' + code));
+    if (m.back) $('banner').style.display = 'none';
+    if (wantSolo && !m.back) ws.send(JSON.stringify({ t:'solo' }));
     return;
   }
   if (m.t !== 'state') return;
@@ -631,6 +715,10 @@ function renderHud(m){
   $('leap').classList.toggle('hidden', leaps < 1);
   $('leap-n').textContent = leaps;
 
+  var cool = (r && r.bc) || 0;
+  $('brake').classList.toggle('cooling', cool > 0);
+  $('brake-n').textContent = cool > 0 ? cool : '';
+
   if (role === 'runner' && r){
     $('role').innerHTML = leaps
       ? 'Running &nbsp;<span id="lvl">' + leaps + ' leap' + (leaps > 1 ? 's' : '') + '</span>'
@@ -649,7 +737,11 @@ function renderHud(m){
   $('inkbar').firstElementChild.style.width = (pct * 100) + '%';
   $('inkbar').classList.toggle('low', pct < 0.25);
 
-  if (m.ph === 'result'){
+  if (m.held){
+    banner('Waiting for ' + m.held,
+           'Everything is paused. ' + m.hold + ' seconds before the round goes on without them.');
+    lastCd = 99;
+  } else if (m.ph === 'result'){
     $('banner-big').textContent = m.result;
     $('banner-small').textContent = m.solo ? 'Going again' : 'Next round in a moment';
     $('banner').style.display = 'block';
@@ -746,21 +838,25 @@ function renderRecord(rows){
 }
 
 /* ---------- the stored leaderboard ---------- */
-var topRows = [], recordBefore = 0, recordSeen = false;
+var topRows = [], dayRows = [], recordBefore = 0, recordSeen = false;
+function boardRows(rows, empty){
+  return rows.length
+    ? rows.map(function(p, i){
+        return '<li><span><span class="rank">' + (i+1) + '</span>' + esc(p.n) +
+               (p.w ? ' <span class="tag2">with ' + esc(p.w) + '</span>' : '') +
+               '</span><span class="metres">' + p.m + ' m</span></li>';
+      }).join('')
+    : '<li><span class="tag2">' + empty + '</span></li>';
+}
 function loadTop(into, after){
   fetch('/api/top', { cache:'no-store' }).then(function(r){ return r.json(); }).then(function(j){
-    var rows = (j.top || []).slice(0, 10);
-    topRows = rows;
-    if (after) after(rows);
+    topRows = (j.top || []).slice(0, 10);
+    dayRows = (j.day || []).slice(0, 10);
+    if (after) after(topRows);
     var el = $(into);
-    if (!el) return;
-    el.innerHTML = rows.length
-      ? rows.map(function(p, i){
-          return '<li><span><span class="rank">' + (i+1) + '</span>' + esc(p.n) +
-                 (p.w ? ' <span class="tag2">with ' + esc(p.w) + '</span>' : '') +
-                 '</span><span class="metres">' + p.m + ' m</span></li>';
-        }).join('')
-      : '<li><span class="tag2">nobody has run yet</span></li>';
+    if (el) el.innerHTML = boardRows(topRows, 'nobody has run yet');
+    var d = $('day-list');
+    if (d) d.innerHTML = boardRows(dayRows, 'nobody has run today');
   }).catch(function(){
     var el = $(into);
     if (el) el.innerHTML = '<li><span class="tag2">could not load</span></li>';
@@ -906,6 +1002,7 @@ function frame(){
 
   paintBoard(ctx, VW, VH);
   drawMilestones(r);
+  drawPits();
   if (role === 'drawer') drawReach(r);
   var live = liveSegs();
   strokeChalk(ctx, chalkPath(live.solid, sx, sy), 11, 4.5);
@@ -922,6 +1019,7 @@ function frame(){
     strokeChalk(ctx, chalkPath(wet, sx, sy), 10, 4);
     ctx.restore();
   }
+  drawBlocks();
   drawRunner(r, smooth);
 
   /* footsteps, but only while actually on the ground and running */
@@ -967,6 +1065,78 @@ function drawMilestones(r){
   ctx.restore();
 }
 
+/* ==========================================================================
+   What is in the way
+
+   Three shapes, all drawn in chalk so they belong on the board: a wall to get
+   over, a hanging block to get under, and a band where chalk will not stick.
+   ========================================================================== */
+function hatch(x0, y0, x1, y1, gap, colour){
+  ctx.save();
+  ctx.beginPath(); ctx.rect(x0, y0, x1 - x0, y1 - y0); ctx.clip();
+  ctx.strokeStyle = colour; ctx.lineWidth = 1.6;
+  ctx.beginPath();
+  for (var x = x0 - (y1 - y0); x < x1; x += gap){
+    ctx.moveTo(x, y1); ctx.lineTo(x + (y1 - y0), y0);
+  }
+  ctx.stroke();
+  ctx.restore();
+}
+
+/* the pits go behind everything, because they are a hole in the board */
+function drawPits(){
+  var list = (view && view.o) || [];
+  for (var i = 0; i < list.length; i++){
+    var o = list[i];
+    if (o[0] !== 2) continue;
+    var x0 = sx(o[1]), x1 = sx(o[1] + o[2]);
+    if (x1 < -30 || x0 > VW + 30) continue;
+    ctx.save();
+    ctx.fillStyle = 'rgba(0,0,0,.22)';
+    ctx.fillRect(x0, 0, x1 - x0, VH);
+    hatch(x0, 0, x1, VH, 16, 'rgba(232,119,107,.20)');
+    ctx.strokeStyle = 'rgba(232,119,107,.55)';
+    ctx.lineWidth = 2; ctx.setLineDash([8, 7]);
+    ctx.beginPath();
+    ctx.moveTo(x0, 0); ctx.lineTo(x0, VH);
+    ctx.moveTo(x1, 0); ctx.lineTo(x1, VH);
+    ctx.stroke();
+    ctx.setLineDash([]);
+    if (x1 - x0 > 54){
+      ctx.font = '700 18px "Caveat", cursive';
+      ctx.fillStyle = 'rgba(232,119,107,.85)';
+      ctx.textAlign = 'center';
+      ctx.fillText('no chalk', (x0 + x1) / 2, VH * 0.3);
+    }
+    ctx.restore();
+  }
+}
+
+/* the solid things go on top of the chalk, because you can see them */
+function drawBlocks(){
+  var list = (view && view.o) || [];
+  ctx.save();
+  ctx.lineCap = 'square'; ctx.lineJoin = 'miter';
+  for (var i = 0; i < list.length; i++){
+    var o = list[i], x0, x1, y0, y1;
+    if (o[0] === 0){
+      x0 = sx(o[1]); x1 = sx(o[1] + WALL_W);
+      y0 = sy(o[2]); y1 = sy(-0.9);
+    } else if (o[0] === 1){
+      x0 = sx(o[1]); x1 = sx(o[1] + ROOF_W);
+      y0 = sy(o[2] + 3.4); y1 = sy(o[2]);
+    } else continue;
+    if (x1 < -30 || x0 > VW + 30) continue;
+    ctx.fillStyle = 'rgba(20,40,32,.55)';
+    ctx.fillRect(x0, y0, x1 - x0, y1 - y0);
+    hatch(x0, y0, x1, y1, 9, 'rgba(244,243,233,.34)');
+    ctx.strokeStyle = 'rgba(244,243,233,.92)';
+    ctx.lineWidth = 3;
+    ctx.strokeRect(x0, y0, x1 - x0, y1 - y0);
+  }
+  ctx.restore();
+}
+
 /* The drawer needs to see where the chalk works. When this was almost
    invisible people drew past the edge and watched the line disappear. */
 var nudgedAt = 0;
@@ -997,6 +1167,20 @@ function drawRunner(r, at){
   ctx.globalAlpha = r.a ? 1 : 0.32;
   ctx.lineCap = 'round';
   ctx.lineWidth = Math.max(2.4, s * 0.072);
+
+  /* braking: heels dug in, and a scuff of chalk dust behind */
+  if (r.bk){
+    ctx.strokeStyle = 'rgba(159,215,154,.55)';
+    ctx.lineWidth = Math.max(2.6, s * 0.08);
+    ctx.beginPath();
+    for (var b = 1; b <= 3; b++){
+      ctx.moveTo(-s * (0.18 + b * 0.14), s * 0.34);
+      ctx.lineTo(-s * (0.02 + b * 0.14), s * 0.30 - b * 2);
+    }
+    ctx.stroke();
+    ctx.lineWidth = Math.max(2.4, s * 0.072);
+    ctx.rotate(-0.16);
+  }
 
   if (r.fl){
     ctx.strokeStyle = 'rgba(240,166,92,.45)';
@@ -1091,6 +1275,10 @@ function sendLeap(){
   if (view && view.r && !view.r.lp) return;
   if (ws && ws.readyState === 1){ ws.send(JSON.stringify({ t:'leap' })); sfx.leap(); buzz([22, 40, 22]); }
 }
+function sendBrake(){
+  if (view && view.r && view.r.bc > 0) return;
+  if (ws && ws.readyState === 1){ ws.send(JSON.stringify({ t:'brake' })); sfx.brake(); buzz(18); }
+}
 
 var drawing = false, penId = null, lastSent = 0;
 function flush(force){
@@ -1121,11 +1309,19 @@ cv.addEventListener('pointerdown', function(e){
 /* A point the server is going to throw away should never be drawn here either,
    or the line appears and then goes. The back edge is pulled in by a metre and
    a half because the runner keeps moving while the message is in flight. */
+function inPit(x){
+  var list = (view && view.o) || [];
+  for (var i = 0; i < list.length; i++){
+    if (list[i][0] === 2 && x > list[i][1] && x < list[i][1] + list[i][2]) return true;
+  }
+  return false;
+}
 function inReach(x, y){
   var r = view && view.r;
   if (!r) return true;
   if (x < r.x - REACH_BACK + 1.5 || x > r.x + REACH_FWD - 0.5) return false;
   if (y < r.y - REACH_DOWN + 0.5 || y > r.y + REACH_UP - 0.5) return false;
+  if (inPit(x)) return false;
   return true;
 }
 function penTo(x, y){
@@ -1169,11 +1365,13 @@ cv.addEventListener('pointercancel', penUp);
 
 $('jump').addEventListener('pointerdown', function(e){ e.preventDefault(); e.stopPropagation(); sendJump(); });
 $('leap').addEventListener('pointerdown', function(e){ e.preventDefault(); e.stopPropagation(); sendLeap(); });
+$('brake').addEventListener('pointerdown', function(e){ e.preventDefault(); e.stopPropagation(); sendBrake(); });
 addEventListener('keydown', function(e){
   if (e.target && e.target.tagName === 'INPUT') return;
   var k = e.key;
   if (k === ' ' || k === 'ArrowUp' || k === 'w' || k === 'W'){ sendJump(); e.preventDefault(); }
   if (k === 'Shift' || k === 'l' || k === 'L'){ sendLeap(); e.preventDefault(); }
+  if (k === 'ArrowDown' || k === 's' || k === 'S'){ sendBrake(); e.preventDefault(); }
 });
 
 /* ---------- wiring ---------- */
@@ -1225,6 +1423,18 @@ $('lobby-code').addEventListener('click', function(){
 
 var pre = location.search.match(/room=([A-Za-z]{4})/);
 if (pre){ $('join-code').value = pre[1].toUpperCase(); $('host-name').focus(); }
+
+/* A reload is the other way people vanish, and the seat is held for the same
+   twenty five seconds, so walk straight back in rather than showing the gate. */
+(function(){
+  var seat = seatStore();
+  if (!seat || !seat.k || !seat.c) return;
+  if (Date.now() - seat.at > 30000){ forgetSeat(); return; }
+  code = seat.c; myKey = seat.k; myName = seat.n || 'Player';
+  $('host-name').value = myName;
+  status('Going back to ' + code);
+  reopen();
+})();
 </script>
 </body>
 </html>
@@ -1289,6 +1499,23 @@ export const FLOAT_S     = 1.1;
 export const FLOAT_G     = 0.34;
 export function leapsEarned(dist){ return Math.floor(Math.max(0, dist) / LEAP_EVERY); }
 
+/* ---------- the brake ------------------------------------------------------
+   Until this the runner could only jump and everything else belonged to the
+   drawer. The brake is the runner's one say in the pace: a second of going
+   slow, which is a second the drawer gets to catch up. It cannot be held
+   down, and it is on a cooldown, so it is a decision rather than a speed
+   setting.
+   ------------------------------------------------------------------------ */
+export const BRAKE_S     = 1.0;
+export const BRAKE_MUL   = 0.45;
+export const BRAKE_CD    = 6.0;
+
+/* ---------- somebody's wifi -------------------------------------------------
+   A seat is kept warm rather than emptied, and the round holds still while it
+   waits, because losing a round to a train tunnel is the worst way to lose.
+   ------------------------------------------------------------------------ */
+export const HOLD_MS     = 25000;
+
 /* ---------- chalk ----------------------------------------------------------
    The whole balance of the game. Too much and the drawer paves a motorway,
    too little and nobody gets anywhere.
@@ -1324,6 +1551,108 @@ export const TOP_N       = 10;      /* how many scores the board keeps */
    after the first live test filled it with two of mine. */
 export const TOP_ROOM    = '__board_v1__';
 
+/* ==========================================================================
+   The level
+
+   Without these the best thing a drawer can do is lay one long flat line, and
+   the game is only about keeping up. Three things get in the way, and each
+   one asks a different question.
+
+     a wall   the runner must get over it, so the drawer must build a ramp
+     a roof   the runner must stay under it, so the road cannot just go up
+     a pit    chalk does not stick here at all, so the runner has to jump it
+
+   The whole level comes out of one number. Both players are sent the same
+   seed and the same obstacles, and tomorrow's board can be the same for
+   everybody by picking the seed from the date.
+   ========================================================================== */
+export const WALL_W      = 0.9;
+export const ROOF_W      = 2.6;
+export const OBS_FROM    = 45;      /* nothing in the first stretch */
+export const OBS_TO      = 3000;
+
+/* a small deterministic generator, so a seed really is a level */
+export function rng(seed){
+  let a = (seed >>> 0) || 1;
+  return function(){
+    a += 0x6D2B79F5;
+    let t = a;
+    t = Math.imul(t ^ (t >>> 15), t | 1);
+    t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  };
+}
+
+export function makeLevel(seed){
+  const rnd = rng(seed);
+  const out = [];
+  let x = OBS_FROM;
+  while (x < OBS_TO){
+    /* they come closer together as the runner gets faster */
+    const hard = Math.min(1, x / 700);
+    const gap = 30 - 11 * hard + rnd() * (18 - 6 * hard);
+    x += gap;
+    if (x >= OBS_TO) break;
+
+    const roll = rnd();
+    if (roll < 0.42){
+      out.push({ k: 0, x: r2(x), h: r2(1.1 + rnd() * (0.8 + 0.9 * hard)) });
+    } else if (roll < 0.70){
+      /* low enough to matter, high enough to get under */
+      out.push({ k: 1, x: r2(x), y: r2(3.1 + rnd() * 1.1) });
+    } else {
+      /* A pit has to be clearable by a plain jump at the speed the runner will
+         be doing when they meet it, with a margin. Otherwise it is not an
+         obstacle, it is a wall that looks like a gap. */
+      const air = 2 * JUMP_V / GRAVITY;
+      const room = Math.max(2.2, speedAt(x) * air - 1.2);
+      out.push({ k: 2, x: r2(x), w: r2(Math.min(2.6 + rnd() * (1.1 + 2.2 * hard), room)) });
+    }
+  }
+  return out;
+}
+
+/* Obstacles become ordinary line segments, so the runner physics does not
+   need to learn anything new. Walls and roofs reach well past the runner in
+   both directions: going around one is not the idea. */
+export function hardSegs(obs){
+  const segs = [];
+  for (const o of obs){
+    if (o.k === 0){
+      const x2 = o.x + WALL_W;
+      segs.push({ x1:o.x, y1:o.h, x2:x2,   y2:o.h });
+      segs.push({ x1:o.x, y1:-5.5, x2:o.x, y2:o.h });
+      segs.push({ x1:x2,  y1:-5.5, x2:x2,  y2:o.h });
+    } else if (o.k === 1){
+      const x2 = o.x + ROOF_W;
+      segs.push({ x1:o.x, y1:o.y, x2:x2,   y2:o.y });
+      segs.push({ x1:o.x, y1:o.y, x2:o.x,  y2:o.y + 14 });
+      segs.push({ x1:x2,  y1:o.y, x2:x2,   y2:o.y + 14 });
+    }
+  }
+  return segs;
+}
+
+/* chalk does not stick in a pit, which is the whole point of a pit */
+export function inPit(obs, x){
+  for (const o of obs){
+    if (o.k === 2 && x > o.x && x < o.x + o.w) return true;
+  }
+  return false;
+}
+
+/* the seed everybody shares on a given day */
+export function daySeed(now){
+  const d = new Date(now === undefined ? Date.now() : now);
+  const key = d.getUTCFullYear() * 10000 + (d.getUTCMonth() + 1) * 100 + d.getUTCDate();
+  return (key * 2654435761) >>> 0;
+}
+export function dayStamp(now){
+  const d = new Date(now === undefined ? Date.now() : now);
+  const p = n => (n < 10 ? '0' : '') + n;
+  return d.getUTCFullYear() + '-' + p(d.getUTCMonth() + 1) + '-' + p(d.getUTCDate());
+}
+
 export function roomCode(rnd){
   const L = 'ABCDEFGHJKLMNPQRSTUVWXYZ';   /* no I or O, they misread aloud */
   let s = '';
@@ -1349,25 +1678,42 @@ export function withinReach(runnerX, runnerY, x, y){
 /* ---------- the runner ----------------------------------------------------- */
 export function newRunner(){
   return { x: START_X, y: START_Y, vy: 0, grounded: false, alive: true,
-           dist: 0, leaps: 0, banked: 0, float: 0 };
+           dist: 0, leaps: 0, banked: 0, float: 0, brake: 0, cd: 0, stuck: 0 };
 }
 
-export function stepRunner(r, segs, dt, speed){
+/* Running into a wall used to mean grinding against it forever, because the
+   collision just pushed the runner back and the next tick pushed them
+   forward again. Not getting anywhere for a third of a second is a crash. */
+export const STUCK_S = 0.34;
+
+export function pullBrake(r){
+  if (!r.alive || r.brake > 0 || r.cd > 0) return false;
+  r.brake = BRAKE_S;
+  r.cd = BRAKE_CD;
+  return true;
+}
+
+export function stepRunner(r, segs, dt, speed, hard){
   if (!r.alive) return r;
+  const wasX = r.x;
 
   const floating = r.float > 0;
   if (floating) r.float = Math.max(0, r.float - dt);
+  if (r.brake > 0) r.brake = Math.max(0, r.brake - dt);
+  if (r.cd > 0)    r.cd    = Math.max(0, r.cd - dt);
   r.vy -= GRAVITY * (floating ? FLOAT_G : 1) * dt;
 
-  let nx = r.x + (speed === undefined ? speedAt(r.dist) : speed) * dt;
+  const pace = (speed === undefined ? speedAt(r.dist) : speed) * (r.brake > 0 ? BRAKE_MUL : 1);
+  let nx = r.x + pace * dt;
   let ny = r.y + r.vy * dt;
   r.grounded = false;
 
   /* Two passes settles the common case of landing in the crook of two
      strokes without the runner jittering between them. */
-  for (let pass = 0; pass < 2; pass++){
-    for (let i = 0; i < segs.length; i++){
-      const s = segs[i];
+  const resolve = list => {
+    if (!list) return;
+    for (let i = 0; i < list.length; i++){
+      const s = list[i];
       if (s.x2 < nx - 3 || s.x1 > nx + 3) continue;
       const hit = segDistance(nx, ny, s.x1, s.y1, s.x2, s.y2);
       if (hit.d >= RUNNER_R || hit.d === 0) continue;
@@ -1379,11 +1725,17 @@ export function stepRunner(r, segs, dt, speed){
       if (oy > 0.45 && r.vy < 0){ r.vy = 0; r.grounded = true; }
       else if (oy < -0.45 && r.vy > 0){ r.vy = 0; }
     }
-  }
+  };
+  for (let pass = 0; pass < 2; pass++){ resolve(segs); resolve(hard); }
 
   r.x = nx; r.y = ny;
   r.dist = Math.max(r.dist, r.x - START_X);
   if (r.y < DEATH_Y) r.alive = false;
+
+  /* nowhere for a third of a second means something is in the way */
+  if (r.x <= wasX + 1e-4) r.stuck += dt;
+  else r.stuck = 0;
+  if (r.stuck > STUCK_S) r.alive = false;
   return r;
 }
 
@@ -1394,19 +1746,50 @@ export function stepRunner(r, segs, dt, speed){
    runs out of chalk if the runner is quick, so a solo game is a real game
    rather than a cutscene.
    ------------------------------------------------------------------------ */
-export function botStroke(runner, from, ink){
+/* what height the ground should be at a given x, given what is in the way.
+   A ramp starts four metres before a wall so the runner can walk up it. */
+export function botTargetY(obs, x){
+  let y = 1.2;
+  for (const o of obs){
+    if (o.k === 2 && x > o.x - 0.3 && x < o.x + o.w + 0.3) return null;  /* no chalk */
+    if (o.k === 0){
+      const top = o.h + 0.45;
+      if (x > o.x - 4 && x <= o.x)      y = Math.max(y, 1.2 + (top - 1.2) * (x - (o.x - 4)) / 4);
+      else if (x > o.x && x < o.x + WALL_W + 1.2) y = Math.max(y, top);
+    }
+  }
+  for (const o of obs){
+    if (o.k === 1 && x > o.x - 1.2 && x < o.x + ROOF_W + 1.2){
+      y = Math.min(y, o.y - 1.05);
+    }
+  }
+  return y;
+}
+
+export function botStroke(runner, from, ink, obs){
   const target = runner.x + 11;
   if (from >= target) return null;
+  const list = obs || [];
   const pts = [];
   let x = Math.max(from, runner.x - 2);
-  /* keep to a height the runner can actually land on */
-  const y = 1.2;
   let spend = 0;
-  pts.push(x, y);
+  let y0 = botTargetY(list, x);
+  if (y0 !== null) pts.push(x, y0);
   while (x < target && spend < ink - 0.5){
     const step = Math.min(0.5, target - x);
-    x += step; spend += step;
-    pts.push(x, y);
+    const nx = x + step;
+    const ny = botTargetY(list, nx);
+    if (ny === null){
+      /* a pit: leave it empty and pick the line up on the far side */
+      x = nx;
+      if (pts.length >= 4) break;
+      pts.length = 0;
+      continue;
+    }
+    if (!pts.length) pts.push(x, botTargetY(list, x) === null ? ny : botTargetY(list, x));
+    spend += Math.hypot(step, ny - (pts[pts.length - 1] || ny));
+    x = nx;
+    pts.push(x, ny);
   }
   return pts.length >= 4 ? { pts, end: x } : null;
 }
@@ -1453,6 +1836,11 @@ export class Board {
     this.botFrom = LEDGE_END;
     this.botInk = INK_MAX;
     this.top = null;         /* lazily loaded leaderboard */
+    this.day = null;         /* and today's, which resets itself */
+    this.dayOf = '';
+    this.seed = 0;
+    this.obs = [];
+    this.hard = [];
   }
 
   /* ---------- the stored leaderboard --------------------------------------- */
@@ -1462,13 +1850,32 @@ export class Board {
     catch { this.top = []; }
     return this.top;
   }
+  /* Today's list, which empties itself when the date turns over. One list
+     that only ever grows stops being worth looking at after a week; a list
+     you can still get onto today is a reason to come back. */
+  async loadDay(){
+    if (this.day && this.dayOf === dayStamp()) return this.day;
+    let saved = null;
+    try { saved = await this.state.storage.get('day'); } catch {}
+    this.dayOf = dayStamp();
+    this.day = (saved && saved.on === this.dayOf) ? saved.rows : [];
+    return this.day;
+  }
   async recordScore(name, metres, partner){
     if (!(metres > 0)) return;
+    const row = { n: name, m: Math.floor(metres), w: partner || '', at: Date.now() };
+
     const top = await this.loadTop();
-    top.push({ n: name, m: Math.floor(metres), w: partner || '', at: Date.now() });
+    top.push(row);
     top.sort((a, b) => b.m - a.m);
     this.top = top.slice(0, TOP_N);
     try { await this.state.storage.put('top', this.top); } catch {}
+
+    const day = await this.loadDay();
+    day.push(row);
+    day.sort((a, b) => b.m - a.m);
+    this.day = day.slice(0, TOP_N);
+    try { await this.state.storage.put('day', { on: this.dayOf, rows: this.day }); } catch {}
   }
 
   /* A room does not own the leaderboard, so it hands the score to the one
@@ -1499,7 +1906,8 @@ export class Board {
         });
       }
       const top = await this.loadTop();
-      return new Response(JSON.stringify({ top }), {
+      const day = await this.loadDay();
+      return new Response(JSON.stringify({ top, day, on: this.dayOf }), {
         headers: { 'content-type': 'application/json', 'cache-control': 'no-store' }
       });
     }
@@ -1525,17 +1933,34 @@ export class Board {
 
     if (m.t === 'join'){
       if (this.sockets.has(ws)) return;
+
+      /* somebody coming back to a seat that was being kept for them */
+      if (m.key){
+        const back = this.players.find(x => x.key === m.key);
+        if (back){
+          if (back.ws && back.ws !== ws){ try { back.ws.close(1000, 'replaced'); } catch {} }
+          this.sockets.delete(back.ws);
+          back.ws = ws; back.gone = 0;
+          this.sockets.set(ws, back);
+          send(ws, { t:'you', id: back.id, name: back.name, key: back.key, back: true });
+          this.pushAll();
+          return;
+        }
+        /* the seat is gone, so fall through and treat it as a fresh arrival */
+      }
+
       if (m.create && this.players.length > 0){ send(ws, { t:'taken' }); return; }
       if (this.phase !== 'lobby'){ send(ws, { t:'closed' }); return; }
       if (this.players.length >= MAX_PLAYERS){ send(ws, { t:'full' }); return; }
       const p = {
         id: 'p' + (++this.seq),
+        key: seatKey(),
         name: cleanName(m.name),
-        ws, role: 'drawer', ink: INK_MAX, score: 0, best: 0
+        ws, gone: 0, role: 'drawer', ink: INK_MAX, score: 0, best: 0
       };
       this.players.push(p);
       this.sockets.set(ws, p);
-      send(ws, { t:'you', id: p.id, name: p.name });
+      send(ws, { t:'you', id: p.id, name: p.name, key: p.key });
       this.pushAll();
       return;
     }
@@ -1572,22 +1997,57 @@ export class Board {
       }
       return;
     }
+    if (m.t === 'brake' && this.phase === 'play' && p.role === 'runner'){
+      pullBrake(this.runner);
+      return;
+    }
     if (m.t === 'draw' && this.phase === 'play' && p.role === 'drawer'){
       this.drawFrom(p, m.pts);
       return;
     }
   }
 
+  /* A dropped socket in the middle of a match is usually a tunnel, a locked
+     phone or a tab the browser put to sleep, not somebody quitting. So the
+     seat is kept and the round holds still until they are back or the wait
+     runs out. In the lobby there is nothing to hold, so they just leave. */
   onClose(ws){
     const p = this.sockets.get(ws);
     this.sockets.delete(ws);
-    if (!p) return;
-    this.players = this.players.filter(x => x !== p);
-    if (this.players.length === 0){
-      this.stopLoop(); this.phase = 'lobby'; this.round = 0; return;
+    if (!p || p.ws !== ws) return;
+    p.ws = null;
+
+    /* only a round in progress is worth holding up. Between rounds the loop is
+       stopped, so a held seat would never be released. */
+    if (this.phase !== 'play' || this.solo){
+      this.players = this.players.filter(x => x !== p);
+      if (this.players.length === 0){
+        this.stopLoop(); this.phase = 'lobby'; this.round = 0; this.solo = false;
+      } else this.pushAll();
+      return;
     }
-    if (this.phase === 'play' && p.id === this.runnerId) this.endRound('The runner left');
-    else this.pushAll();
+    p.gone = Date.now();
+    this.pushAll();
+  }
+
+  /* who we are waiting for, if anyone */
+  waitingFor(){ return this.players.find(p => p.gone); }
+
+  /* the wait is over: they are out, and the round goes on without them */
+  dropStale(now){
+    const stale = this.players.filter(p => p.gone && now - p.gone > HOLD_MS);
+    if (!stale.length) return false;
+    for (const p of stale) this.players = this.players.filter(x => x !== p);
+    if (this.players.length === 0){
+      this.stopLoop(); this.phase = 'lobby'; this.round = 0; this.solo = false;
+      return true;
+    }
+    if (this.phase === 'play' && stale.some(p => p.id === this.runnerId)){
+      this.endRound('The runner left');
+      return true;
+    }
+    this.pushAll();
+    return true;
   }
 
   isHost(p){ return this.players[0] === p; }
@@ -1606,6 +2066,7 @@ export class Board {
       if (p.ink < len) break;
       if (!withinReach(this.runner.x, this.runner.y, x1, y1)) continue;
       if (!withinReach(this.runner.x, this.runner.y, x2, y2)) continue;
+      if (inPit(this.obs, x1) || inPit(this.obs, x2)) continue;
 
       p.ink -= len;
       this.segs.push({ x1: r2(x1), y1: r2(y1), x2: r2(x2), y2: r2(y2) });
@@ -1632,6 +2093,10 @@ export class Board {
     this.runnerId = ps[idx].id;
     this.runner = newRunner();
     this.segs = [{ x1: -1, y1: 1.2, x2: LEDGE_END, y2: 1.2 }];
+    /* everybody in the room runs the same level in a given round */
+    this.seed = (daySeed() ^ ((this.round + 1) * 0x9E3779B1)) >>> 0;
+    this.obs = makeLevel(this.seed);
+    this.hard = hardSegs(this.obs);
     this.botFrom = LEDGE_END;
     this.botInk = INK_MAX;
     this.phase = 'play';
@@ -1657,9 +2122,21 @@ export class Board {
 
     /* an abandoned board should not sit there costing money */
     if (now - this.lastActive > IDLE_MS){
-      for (const p of this.players){ try { p.ws.close(1000, 'idle'); } catch {} }
+      for (const p of this.players){ try { p.ws && p.ws.close(1000, 'idle'); } catch {} }
       this.players = []; this.sockets.clear();
       this.stopLoop(); this.phase = 'lobby';
+      return;
+    }
+
+    /* Somebody's connection went. Everything stops, including the clock the
+       runner is measured against, until they are back or their time runs out.
+       The countdown is pushed along too, so nobody loses their head start. */
+    if (this.waitingFor()){
+      if (this.dropStale(now)) return;
+      /* only push the countdown along if it has not already finished, or a
+         long wait would hand the runner a second head start */
+      if (now < this.runAt) this.runAt += Math.round(dt * 1000);
+      this.pushAll();
       return;
     }
 
@@ -1671,7 +2148,7 @@ export class Board {
       this.botDraw();
     }
 
-    if (now >= this.runAt) stepRunner(this.runner, this.segs, dt);
+    if (now >= this.runAt) stepRunner(this.runner, this.segs, dt, undefined, this.hard);
 
     const earned = leapsEarned(this.runner.dist);
     if (earned > this.runner.banked){
@@ -1688,12 +2165,13 @@ export class Board {
   }
 
   botDraw(){
-    const stroke = botStroke(this.runner, this.botFrom, this.botInk);
+    const stroke = botStroke(this.runner, this.botFrom, this.botInk, this.obs);
     if (!stroke) return;
     const pts = stroke.pts;
     for (let i = 0; i + 3 < pts.length; i += 2){
       const len = Math.hypot(pts[i+2] - pts[i], pts[i+3] - pts[i+1]);
-      if (len < MIN_SEG || this.botInk < len) break;
+      if (len < MIN_SEG || len > MAX_SEG || this.botInk < len) break;
+      if (inPit(this.obs, pts[i]) || inPit(this.obs, pts[i+2])) continue;
       this.botInk -= len;
       this.segs.push({ x1: r2(pts[i]), y1: r2(pts[i+1]), x2: r2(pts[i+2]), y2: r2(pts[i+3]) });
     }
@@ -1742,8 +2220,14 @@ export class Board {
       ink: r2(p.ink),
       inkMax: INK_MAX,
       result: this.result,
-      roster: this.players.map(o => ({ i:o.id, n:o.name, s:o.score, b:o.best, r:o.role }))
+      roster: this.players.map(o => ({ i:o.id, n:o.name, s:o.score, b:o.best,
+                                       r:o.role, off:o.gone ? 1 : 0 }))
     };
+    const waiting = this.waitingFor();
+    if (waiting){
+      msg.held = waiting.name;
+      msg.hold = Math.max(0, Math.ceil((HOLD_MS - (Date.now() - waiting.gone)) / 1000));
+    }
     if (this.phase === 'play' || this.phase === 'result'){
       const d = this.runner.dist;
       msg.cd = Math.max(0, Math.ceil((this.runAt - Date.now()) / 1000));
@@ -1754,6 +2238,8 @@ export class Board {
         d: Math.floor(d),
         lp: this.runner.leaps,
         fl: this.runner.float > 0 ? 1 : 0,
+        bk: this.runner.brake > 0 ? 1 : 0,
+        bc: Math.ceil(this.runner.cd),
         lv: levelAt(d) + 1,
         ms: nextMilestone(d),
         sp: r2(speedAt(d))
@@ -1761,17 +2247,28 @@ export class Board {
       msg.s = this.segs
         .filter(s => s.x2 > this.runner.x - SEND_BACK && s.x1 < this.runner.x + SEND_FWD)
         .map(s => [s.x1, s.y1, s.x2, s.y2]);
+      /* the obstacles in view. Both players see the same ones, and the drawer
+         needs to see them sooner than the runner does. */
+      msg.o = this.obs
+        .filter(o => o.x > this.runner.x - 20 && o.x < this.runner.x + SEND_FWD)
+        .map(o => o.k === 0 ? [0, o.x, o.h] : o.k === 1 ? [1, o.x, o.y] : [2, o.x, o.w]);
     }
     return msg;
   }
 
   pushAll(){
-    for (const p of this.players) send(p.ws, this.sliceFor(p));
+    for (const p of this.players){ if (p.ws) send(p.ws, this.sliceFor(p)); }
   }
 }
 
 /* ---------- helpers ------------------------------------------------------------- */
-function send(ws, o){ try { ws.send(JSON.stringify(o)); } catch {} }
+function send(ws, o){ try { ws && ws.send(JSON.stringify(o)); } catch {} }
+/* enough to make a seat unguessable by anyone who is not in the room */
+function seatKey(){
+  let s = '';
+  for (let i = 0; i < 4; i++) s += Math.random().toString(36).slice(2, 10);
+  return s.slice(0, 24);
+}
 function r2(n){ return Math.round(n * 100) / 100; }
 function num(v){ v = Number(v); return isFinite(v) ? v : null; }
 function cleanName(n){

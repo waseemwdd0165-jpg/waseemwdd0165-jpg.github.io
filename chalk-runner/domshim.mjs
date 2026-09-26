@@ -47,6 +47,9 @@ export function makeWindow(){
     location:{ protocol:'https:', host:'chalk-runner.test', origin:'https://chalk-runner.test',
                pathname:'/', search:'' },
     navigator:{ vibrate:()=>true, clipboard:{ writeText:async()=>{} } },
+    localStorage:(function(){ const m=new Map(); return {
+      getItem:k=>m.has(k)?m.get(k):null, setItem:(k,v)=>m.set(k,String(v)),
+      removeItem:k=>m.delete(k) }; })(),
     performance:{ now:()=>Date.now() },
     requestAnimationFrame(fn){ return setTimeout(()=>fn(Date.now()), 16); },
     cancelAnimationFrame(id){ clearTimeout(id); },
@@ -57,8 +60,9 @@ export function makeWindow(){
       destination:{}, resume(){}, createOscillator:node, createGain:node,
       createBiquadFilter:node, createBufferSource:node,
       createBuffer:(c,n)=>({ getChannelData:()=>new Float32Array(n) }) }; },
-    fetch: async () => ({ json: async () => ({ top:[
-      { n:'Cat', m:312, w:'Dan' }, { n:'Ann', m:120, w:'Bob' } ] }) }),
+    fetch: async () => ({ json: async () => ({
+      top:[ { n:'Cat', m:312, w:'Dan' }, { n:'Ann', m:120, w:'Bob' } ],
+      day:[ { n:'Eve', m:88, w:'Fay' } ], on:'2026-09-27' }) }),
     WebSocket: function(){ const s = { readyState:1, sent:[],
       send(j){ s.sent.push(JSON.parse(j)); }, close(){} }; win.__sock = s; return s; }
   };
