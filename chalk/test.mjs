@@ -9,6 +9,7 @@
 import { Board, stepRunner, newRunner, segDistance, withinReach, speedAt,
          ROUNDS, INK_MAX, INK_REFILL, MIN_SEG, MAX_SEG, READY_MS, LEDGE_END,
          REACH_FWD, REACH_BACK, RUN_SPEED, SPEED_MAX, SPEED_RAMP,
+         LEAP_EVERY, LEAP_V, JUMP_V, FLOAT_S, leapsEarned,
          START_X, START_Y, DEATH_Y, RUNNER_R }
   from './worker-single.js';
 
@@ -228,6 +229,64 @@ console.log('\nchalk\n');
   b.onMessage(runner.ws, { t:'jump' });
   check('you can jump off the ground', b.runner.vy > 5, b.runner.vy);
   check('and jumping leaves the ground', b.runner.grounded === false);
+}
+
+/* ---------- leaps ------------------------------------------------------------- */
+{
+  check('a leap is worth more than a jump', LEAP_V > JUMP_V, LEAP_V + ' vs ' + JUMP_V);
+  check('none earned before the first hundred', leapsEarned(99) === 0);
+  check('one at a hundred', leapsEarned(100) === 1);
+  check('three at three hundred and a bit', leapsEarned(342) === 3);
+
+  const b = new Board({}, {});
+  const host = join(b, 'A'); join(b, 'B');
+  b.onMessage(host, { t:'start' });
+  const runner = b.players.find(p => p.role === 'runner');
+  const drawer = b.players.find(p => p.role === 'drawer');
+
+  b.onMessage(runner.ws, { t:'leap' });
+  check('you cannot leap without having earned one', b.runner.vy === 0, b.runner.vy);
+
+  /* walk the runner past a hundred metres */
+  b.runner.dist = 205;
+  b.runAt = Date.now() - 1;
+  b.lastTick = Date.now() - 33;
+  b.tick();
+  check('two hundred metres banks two leaps', b.runner.leaps === 2, b.runner.leaps);
+
+  b.runner.vy = 0; b.runner.grounded = false;
+  b.onMessage(runner.ws, { t:'leap' });
+  check('a leap can be spent in mid air', b.runner.vy === LEAP_V, b.runner.vy);
+  check('and it is spent', b.runner.leaps === 1, b.runner.leaps);
+  check('it starts the float', b.runner.float === FLOAT_S, b.runner.float);
+
+  b.onMessage(drawer.ws, { t:'leap' });
+  check('the drawer cannot leap', b.runner.leaps === 1);
+
+  /* a floating runner falls slower than a plain one */
+  const plain = newRunner(); const light = newRunner();
+  light.float = FLOAT_S;
+  for (let i = 0; i < 20; i++){ stepRunner(plain, [], 1/30); stepRunner(light, [], 1/30); }
+  check('floating means falling slower', light.y > plain.y,
+        light.y.toFixed(2) + ' vs ' + plain.y.toFixed(2));
+
+  /* and a leap really does clear more ground than a jump */
+  function hop(v, float){
+    const r = newRunner();
+    r.y = 1.56; r.vy = v; r.float = float;
+    let top = r.y;
+    for (let i = 0; i < 120; i++){ stepRunner(r, [], 1/30); top = Math.max(top, r.y); }
+    return top;
+  }
+  check('a leap goes markedly higher than a jump',
+        hop(LEAP_V, FLOAT_S) > hop(JUMP_V, 0) * 1.6,
+        hop(LEAP_V, FLOAT_S).toFixed(1) + ' vs ' + hop(JUMP_V, 0).toFixed(1));
+
+  /* the count travels to the client */
+  const slice = b.sliceFor(runner);
+  check('the leap count is sent', slice.r.lp === 1, slice.r.lp);
+  check('so is the distance to the next one',
+        slice.r.nx > 0 && slice.r.nx <= LEAP_EVERY, slice.r.nx);
 }
 
 /* ---------- a whole match ------------------------------------------------------ */

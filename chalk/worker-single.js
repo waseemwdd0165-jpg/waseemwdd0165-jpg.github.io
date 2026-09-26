@@ -105,12 +105,27 @@ ul.players li:first-child{border-top:0}
 #inkbar i{display:block;height:100%;background:var(--chalk);width:100%;transition:width .08s linear}
 #inkbar.low i{background:var(--warn)}
 
-#jump{
-  position:fixed;right:16px;bottom:16px;z-index:20;width:104px;height:104px;border-radius:50%;
-  background:rgba(242,241,230,.14);border:2px solid rgba(242,241,230,.45);
-  color:var(--chalk);font:600 15px inherit;display:none;cursor:pointer;
+#pad{
+  position:fixed;right:14px;bottom:14px;z-index:20;display:none;
+  align-items:flex-end;gap:12px;
 }
-#jump:active{background:rgba(242,241,230,.3)}
+#pad button{
+  width:108px;height:108px;border-radius:50%;padding:0;
+  background:rgba(242,241,230,.13);border:2px solid rgba(242,241,230,.45);
+  color:var(--chalk);font:600 16px inherit;cursor:pointer;
+  display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;
+}
+#pad button:active{background:rgba(242,241,230,.32)}
+#leap{
+  width:96px;height:96px;
+  border-color:var(--warn);color:var(--warn);background:rgba(245,166,91,.14);
+  animation:ready 1.6s ease-in-out infinite;
+}
+#leap small{font:700 20px "Caveat",cursive;line-height:1}
+@keyframes ready{
+  0%,100%{ box-shadow:0 0 0 0 rgba(245,166,91,.34) }
+  50%    { box-shadow:0 0 0 12px rgba(245,166,91,0) }
+}
 
 #banner{
   position:fixed;left:50%;top:34%;transform:translate(-50%,-50%);z-index:25;text-align:center;
@@ -158,7 +173,9 @@ ul.players li:first-child{border-top:0}
           The runner never stops and cannot go back. Drag anywhere to lay chalk,
           and it becomes real ground the moment you let go of nothing at all.
           You can only draw near the runner, and the chalk runs out, so you are
-          always one line behind. Four rounds, roles swap, the score is metres.
+          always one line behind. Every hundred metres the runner banks a leap,
+          a huge floating jump that buys the drawer a breath. Four rounds,
+          roles swap, the score is metres.
         </p>
       </div>
     </section>
@@ -201,7 +218,10 @@ ul.players li:first-child{border-top:0}
   <div id="inkbar"><i></i></div>
 </div>
 
-<button id="jump">JUMP</button>
+<div id="pad">
+  <button id="leap" class="hidden">LEAP<small id="leap-n">0</small></button>
+  <button id="jump">JUMP</button>
+</div>
 
 <div id="banner"><div class="big hand" id="banner-big"></div><div class="small" id="banner-small"></div></div>
 
@@ -227,7 +247,7 @@ function showMenu(id){
   $('gate').classList.remove('hidden');
   $('hud').style.display = 'none';
   $('inkwrap').classList.add('hidden');
-  $('jump').style.display = 'none';
+  $('pad').style.display = 'none';
 }
 function showBoard(){
   $('gate').classList.add('hidden');
@@ -317,7 +337,15 @@ function onServer(m, btn, create){
     $('round').textContent = 'Round ' + (m.round + 1) + ' of ' + m.rounds;
     $('dist').textContent = (m.r ? m.r.d : 0) + ' m';
     $('inkwrap').classList.toggle('hidden', role !== 'drawer');
-    $('jump').style.display = role === 'runner' ? 'block' : 'none';
+      $('pad').style.display = role === 'runner' ? 'flex' : 'none';
+    var leaps = (m.r && m.r.lp) || 0;
+    $('leap').classList.toggle('hidden', leaps < 1);
+    $('leap-n').textContent = leaps;
+    if (role === 'runner' && m.r){
+      $('role').textContent = leaps
+        ? 'Running - ' + leaps + ' leap' + (leaps > 1 ? 's' : '') + ' banked'
+        : 'Running - next leap in ' + m.r.nx + ' m';
+    }
     var pct = Math.max(0, Math.min(1, m.ink / m.inkMax));
     $('inkbar').firstElementChild.style.width = (pct * 100) + '%';
     $('inkbar').classList.toggle('low', pct < 0.25);
@@ -404,6 +432,7 @@ makeDust();
 function frame(){
   requestAnimationFrame(frame);
   if (!view || !view.r){ drawBoardOnly(); return; }
+  if (view.ph !== 'play') localSegs.length = 0;
 
   var r = view.r;
 
@@ -428,7 +457,7 @@ function frame(){
 
   paintBoard();
   drawReach(r);
-  drawChalk(view.s || []);
+  drawChalk(liveSegs());
   drawRunner(r);
   drawLocalStroke();
 }
@@ -511,7 +540,18 @@ function drawRunner(r){
   ctx.save();
   ctx.translate(x, y);
   ctx.globalAlpha = r.a ? 1 : 0.35;
-  ctx.strokeStyle = 'rgba(242,241,230,.98)';
+  if (r.fl){
+    /* a trail of dust while the leap is carrying them */
+    ctx.strokeStyle = 'rgba(245,166,91,.5)';
+    ctx.lineWidth = Math.max(3, s * 0.1);
+    ctx.beginPath();
+    for (var q = 1; q <= 3; q++){
+      ctx.moveTo(-s * (0.3 + q * 0.28), s * 0.1 + q * 4);
+      ctx.lineTo(-s * (0.1 + q * 0.28), s * 0.1 + q * 4);
+    }
+    ctx.stroke();
+  }
+  ctx.strokeStyle = r.fl ? 'rgba(250,210,160,1)' : 'rgba(242,241,230,.98)';
   ctx.lineCap = 'round';
   ctx.lineWidth = Math.max(2.4, s * 0.075);
 
@@ -546,17 +586,33 @@ requestAnimationFrame(frame);
    Input
    ========================================================================== */
 function sendJump(){ if (ws && ws.readyState === 1) ws.send(JSON.stringify({ t:'jump' })); }
+function sendLeap(){ if (ws && ws.readyState === 1) ws.send(JSON.stringify({ t:'leap' })); }
 
 var drawing = false, penId = null, lastSent = 0;
+
+/* Chalk used to appear only once the server echoed it back, which is a whole
+   round trip of nothing happening under your finger. Now every stroke is
+   drawn locally the instant it is sent and kept for a moment, so the line
+   follows the hand and the server copy quietly takes over behind it. */
+var localSegs = [];
 function flush(force){
   if (!ws || ws.readyState !== 1) return;
   if (pending.length < 4) return;
   var now = performance.now();
-  if (!force && now - lastSent < 60) return;
+  if (!force && now - lastSent < 33) return;
   lastSent = now;
   ws.send(JSON.stringify({ t:'draw', pts: pending }));
-  /* keep the last point so the next batch joins on */
+  for (var i = 0; i + 3 < pending.length; i += 2){
+    localSegs.push({ s: [pending[i], pending[i+1], pending[i+2], pending[i+3]], at: now });
+  }
   pending = pending.slice(-2);
+}
+function liveSegs(){
+  var now = performance.now();
+  while (localSegs.length && now - localSegs[0].at > 700) localSegs.shift();
+  var out = (view && view.s) ? view.s.slice() : [];
+  for (var i = 0; i < localSegs.length; i++) out.push(localSegs[i].s);
+  return out;
 }
 
 cv.addEventListener('pointerdown', function(e){
@@ -580,10 +636,12 @@ cv.addEventListener('pointercancel', penUp);
 
 /* the runner taps anywhere, or uses the button, or the space bar */
 cv.addEventListener('pointerdown', function(){ if (role === 'runner') sendJump(); });
-$('jump').addEventListener('pointerdown', function(e){ e.preventDefault(); sendJump(); });
+$('jump').addEventListener('pointerdown', function(e){ e.preventDefault(); e.stopPropagation(); sendJump(); });
+$('leap').addEventListener('pointerdown', function(e){ e.preventDefault(); e.stopPropagation(); sendLeap(); });
 addEventListener('keydown', function(e){
   if (e.target && e.target.tagName === 'INPUT') return;
   if (e.key === ' ' || e.key === 'ArrowUp' || e.key === 'w'){ sendJump(); e.preventDefault(); }
+  if (e.key === 'Shift' || e.key === 'l' || e.key === 'L'){ sendLeap(); e.preventDefault(); }
 });
 
 /* ---------- wiring ---------- */
@@ -646,6 +704,14 @@ export const TICK_MS     = 33;      /* about thirty a second */
    draw in half a second, so every round ended at the same nine metres. Now
    there is a countdown to lay the first stretch, a longer ledge, and a speed
    that creeps up rather than starting flat out. */
+/* Every hundred metres the runner banks a Leap: a much higher jump that
+   also hangs in the air, so the drawer gets a breath and the runner gets a
+   reason to keep going rather than just surviving. */
+export const LEAP_EVERY  = 100;
+export const LEAP_V      = 15.5;
+export const FLOAT_S     = 1.1;     /* seconds of light gravity after a leap */
+export const FLOAT_G     = 0.34;    /* how much gravity is left while floating */
+
 export const READY_MS    = 4000;
 export const LEDGE_END   = 13;
 export const RUN_SPEED   = 5.4;     /* metres a second at the start */
@@ -710,7 +776,9 @@ export function withinReach(runnerX, runnerY, x, y){
 export function stepRunner(r, segs, dt, speed){
   if (!r.alive) return r;
 
-  r.vy -= GRAVITY * dt;
+  const floating = r.float > 0;
+  if (floating) r.float = Math.max(0, r.float - dt);
+  r.vy -= GRAVITY * (floating ? FLOAT_G : 1) * dt;
   let nx = r.x + (speed === undefined ? RUN_SPEED : speed) * dt;
   let ny = r.y + r.vy * dt;
 
@@ -742,8 +810,12 @@ export function stepRunner(r, segs, dt, speed){
 }
 
 export function newRunner(){
-  return { x: START_X, y: START_Y, vy: 0, grounded: false, alive: true, dist: 0 };
+  return { x: START_X, y: START_Y, vy: 0, grounded: false, alive: true,
+           dist: 0, leaps: 0, banked: 0, float: 0 };
 }
+
+/* how many leaps a run of this length has earned in total */
+export function leapsEarned(dist){ return Math.floor(dist / LEAP_EVERY); }
 
 /* ==========================================================================
    Worker
@@ -824,6 +896,17 @@ export class Board {
       if (this.runner.grounded && this.runner.alive){
         this.runner.vy = JUMP_V;
         this.runner.grounded = false;
+      }
+      return;
+    }
+    if (m.t === 'leap' && this.phase === 'play' && p.role === 'runner'){
+      const r = this.runner;
+      /* a leap can be spent in the air, which is the point of banking one */
+      if (r.alive && r.leaps > 0){
+        r.leaps -= 1;
+        r.vy = LEAP_V;
+        r.float = FLOAT_S;
+        r.grounded = false;
       }
       return;
     }
@@ -926,6 +1009,13 @@ export class Board {
       this.segs = this.segs.filter(s => s.x2 > this.runner.x - 24);
     }
 
+    /* bank a leap on every hundredth metre */
+    const earned = leapsEarned(this.runner.dist);
+    if (earned > this.runner.banked){
+      this.runner.leaps += earned - this.runner.banked;
+      this.runner.banked = earned;
+    }
+
     if (!this.runner.alive){ this.endRound(null); return; }
     this.pushAll();
   }
@@ -972,7 +1062,10 @@ export class Board {
         x: r2(this.runner.x), y: r2(this.runner.y),
         g: this.runner.grounded ? 1 : 0,
         a: this.runner.alive ? 1 : 0,
-        d: Math.floor(this.runner.dist)
+        d: Math.floor(this.runner.dist),
+        lp: this.runner.leaps,
+        fl: this.runner.float > 0 ? 1 : 0,
+        nx: LEAP_EVERY - Math.floor(this.runner.dist % LEAP_EVERY)
       };
       /* only the chalk near the runner needs to travel */
       msg.s = this.segs

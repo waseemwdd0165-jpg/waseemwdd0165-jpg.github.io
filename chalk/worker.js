@@ -22,6 +22,14 @@ export const TICK_MS     = 33;      /* about thirty a second */
    draw in half a second, so every round ended at the same nine metres. Now
    there is a countdown to lay the first stretch, a longer ledge, and a speed
    that creeps up rather than starting flat out. */
+/* Every hundred metres the runner banks a Leap: a much higher jump that
+   also hangs in the air, so the drawer gets a breath and the runner gets a
+   reason to keep going rather than just surviving. */
+export const LEAP_EVERY  = 100;
+export const LEAP_V      = 15.5;
+export const FLOAT_S     = 1.1;     /* seconds of light gravity after a leap */
+export const FLOAT_G     = 0.34;    /* how much gravity is left while floating */
+
 export const READY_MS    = 4000;
 export const LEDGE_END   = 13;
 export const RUN_SPEED   = 5.4;     /* metres a second at the start */
@@ -86,7 +94,9 @@ export function withinReach(runnerX, runnerY, x, y){
 export function stepRunner(r, segs, dt, speed){
   if (!r.alive) return r;
 
-  r.vy -= GRAVITY * dt;
+  const floating = r.float > 0;
+  if (floating) r.float = Math.max(0, r.float - dt);
+  r.vy -= GRAVITY * (floating ? FLOAT_G : 1) * dt;
   let nx = r.x + (speed === undefined ? RUN_SPEED : speed) * dt;
   let ny = r.y + r.vy * dt;
 
@@ -118,8 +128,12 @@ export function stepRunner(r, segs, dt, speed){
 }
 
 export function newRunner(){
-  return { x: START_X, y: START_Y, vy: 0, grounded: false, alive: true, dist: 0 };
+  return { x: START_X, y: START_Y, vy: 0, grounded: false, alive: true,
+           dist: 0, leaps: 0, banked: 0, float: 0 };
 }
+
+/* how many leaps a run of this length has earned in total */
+export function leapsEarned(dist){ return Math.floor(dist / LEAP_EVERY); }
 
 /* ==========================================================================
    Worker
@@ -200,6 +214,17 @@ export class Board {
       if (this.runner.grounded && this.runner.alive){
         this.runner.vy = JUMP_V;
         this.runner.grounded = false;
+      }
+      return;
+    }
+    if (m.t === 'leap' && this.phase === 'play' && p.role === 'runner'){
+      const r = this.runner;
+      /* a leap can be spent in the air, which is the point of banking one */
+      if (r.alive && r.leaps > 0){
+        r.leaps -= 1;
+        r.vy = LEAP_V;
+        r.float = FLOAT_S;
+        r.grounded = false;
       }
       return;
     }
@@ -302,6 +327,13 @@ export class Board {
       this.segs = this.segs.filter(s => s.x2 > this.runner.x - 24);
     }
 
+    /* bank a leap on every hundredth metre */
+    const earned = leapsEarned(this.runner.dist);
+    if (earned > this.runner.banked){
+      this.runner.leaps += earned - this.runner.banked;
+      this.runner.banked = earned;
+    }
+
     if (!this.runner.alive){ this.endRound(null); return; }
     this.pushAll();
   }
@@ -348,7 +380,10 @@ export class Board {
         x: r2(this.runner.x), y: r2(this.runner.y),
         g: this.runner.grounded ? 1 : 0,
         a: this.runner.alive ? 1 : 0,
-        d: Math.floor(this.runner.dist)
+        d: Math.floor(this.runner.dist),
+        lp: this.runner.leaps,
+        fl: this.runner.float > 0 ? 1 : 0,
+        nx: LEAP_EVERY - Math.floor(this.runner.dist % LEAP_EVERY)
       };
       /* only the chalk near the runner needs to travel */
       msg.s = this.segs
