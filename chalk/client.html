@@ -207,7 +207,7 @@ ul.players li:first-child{border-top:0}
    guesses where the ground is would disagree with the person drawing it.
    ========================================================================== */
 
-var RUNNER_R = 0.36, START_X = 2;
+var RUNNER_R = 0.36, START_X = 2, LEDGE_END = 13;
 var REACH_BACK = 6, REACH_FWD = 22, REACH_UP = 9, REACH_DOWN = 7;
 
 var $ = function(id){ return document.getElementById(id); };
@@ -318,6 +318,12 @@ function onServer(m, btn, create){
     if (m.ph === 'result'){
       $('banner-big').textContent = m.result;
       $('banner-small').textContent = 'Next round in a moment';
+      $('banner').style.display = 'block';
+    } else if (m.cd > 0){
+      $('banner-big').textContent = m.cd;
+      $('banner-small').textContent = role === 'drawer'
+        ? 'Draw the first stretch, quickly'
+        : 'Hold on, they are laying the ground';
       $('banner').style.display = 'block';
     } else {
       $('banner').style.display = 'none';

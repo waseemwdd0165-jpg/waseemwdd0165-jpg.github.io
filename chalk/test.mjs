@@ -6,9 +6,10 @@
    drawer cheat by drawing the whole level in one go from a mile away.
    ========================================================================== */
 
-import { Board, stepRunner, newRunner, segDistance, withinReach,
-         ROUNDS, INK_MAX, INK_REFILL, MIN_SEG, MAX_SEG,
-         REACH_FWD, REACH_BACK, RUN_SPEED, START_X, START_Y, DEATH_Y, RUNNER_R }
+import { Board, stepRunner, newRunner, segDistance, withinReach, speedAt,
+         ROUNDS, INK_MAX, INK_REFILL, MIN_SEG, MAX_SEG, READY_MS, LEDGE_END,
+         REACH_FWD, REACH_BACK, RUN_SPEED, SPEED_MAX, SPEED_RAMP,
+         START_X, START_Y, DEATH_Y, RUNNER_R }
   from './worker-single.js';
 
 const pendingTimers = [];
@@ -168,6 +169,48 @@ console.log('\nchalk\n');
   check('but never past the maximum',
         (drawer.ink = INK_MAX, b.lastTick = Date.now() - 5000, b.tick(), drawer.ink <= INK_MAX + 1e-9),
         drawer.ink);
+}
+
+/* ---------- the countdown, which the whole game turned out to need ---------- */
+{
+  check('the runner starts slower than it finishes', RUN_SPEED < SPEED_MAX);
+  check('speed at the whistle is the slow one', speedAt(0) === RUN_SPEED);
+  check('speed tops out and stays there',
+        speedAt(SPEED_RAMP) === SPEED_MAX && speedAt(SPEED_RAMP * 4) === SPEED_MAX);
+  check('and it climbs in between',
+        speedAt(SPEED_RAMP/2) > RUN_SPEED && speedAt(SPEED_RAMP/2) < SPEED_MAX,
+        speedAt(SPEED_RAMP/2).toFixed(2));
+
+  /* The bug this exists for: the ledge has to outlast the countdown plus a
+     beat, or the drawer never gets a chance and every round dies the same. */
+  const b = new Board({}, {});
+  const host = join(b, 'A'); join(b, 'B');
+  b.onMessage(host, { t:'start' });
+  const startX = b.runner.x;
+
+  /* a second of ticks before the whistle should move nobody */
+  for (let i = 0; i < 30; i++){ b.lastTick = Date.now() - 33; b.tick(); }
+  check('the runner does not move during the countdown',
+        Math.abs(b.runner.x - startX) < 0.01, b.runner.x);
+  check('but the drawer can already work', b.phase === 'play');
+
+  const drawer = b.players.find(p => p.role === 'drawer');
+  const n = b.segs.length;
+  b.onMessage(drawer.ws, { t:'draw', pts: [13,1.2, 13.5,1.2, 14,1.2] });
+  check('and their chalk lands during the countdown', b.segs.length > n);
+
+  /* once the whistle goes the ledge must last long enough to matter */
+  b.runAt = Date.now() - 1;
+  let ticks = 0;
+  while (b.runner.x < LEDGE_END && ticks < 500){
+    b.lastTick = Date.now() - 33; b.tick(); ticks++;
+  }
+  const secondsOnLedge = (LEDGE_END - startX) / RUN_SPEED;
+  check('the opening ledge lasts about two seconds', secondsOnLedge > 1.7,
+        secondsOnLedge.toFixed(2) + 's');
+  check('so a person has the countdown plus that to draw in',
+        READY_MS / 1000 + secondsOnLedge > 5,
+        (READY_MS/1000 + secondsOnLedge).toFixed(1) + 's');
 }
 
 /* ---------- jumping ---------------------------------------------------------- */

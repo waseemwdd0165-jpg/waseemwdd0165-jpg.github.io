@@ -214,7 +214,7 @@ ul.players li:first-child{border-top:0}
    guesses where the ground is would disagree with the person drawing it.
    ========================================================================== */
 
-var RUNNER_R = 0.36, START_X = 2;
+var RUNNER_R = 0.36, START_X = 2, LEDGE_END = 13;
 var REACH_BACK = 6, REACH_FWD = 22, REACH_UP = 9, REACH_DOWN = 7;
 
 var $ = function(id){ return document.getElementById(id); };
@@ -325,6 +325,12 @@ function onServer(m, btn, create){
     if (m.ph === 'result'){
       $('banner-big').textContent = m.result;
       $('banner-small').textContent = 'Next round in a moment';
+      $('banner').style.display = 'block';
+    } else if (m.cd > 0){
+      $('banner-big').textContent = m.cd;
+      $('banner-small').textContent = role === 'drawer'
+        ? 'Draw the first stretch, quickly'
+        : 'Hold on, they are laying the ground';
       $('banner').style.display = 'block';
     } else {
       $('banner').style.display = 'none';
@@ -618,7 +624,21 @@ if (pre){ $('join-code').value = pre[1].toUpperCase(); $('join-name').focus(); }
 /* ---------- the shape of a round ------------------------------------------ */
 export const ROUNDS      = 4;
 export const TICK_MS     = 33;      /* about thirty a second */
-export const RUN_SPEED   = 7.2;     /* metres a second, and it never slows */
+/* The runner used to set off the instant the round began, which gave the
+   drawer about half a second before the starting ledge ran out. Nobody can
+   draw in half a second, so every round ended at the same nine metres. Now
+   there is a countdown to lay the first stretch, a longer ledge, and a speed
+   that creeps up rather than starting flat out. */
+export const READY_MS    = 4000;
+export const LEDGE_END   = 13;
+export const RUN_SPEED   = 5.4;     /* metres a second at the start */
+export const SPEED_MAX   = 9.0;
+export const SPEED_RAMP  = 45;      /* seconds to reach the top speed */
+
+export function speedAt(secs){
+  const t = Math.max(0, Math.min(1, secs / SPEED_RAMP));
+  return RUN_SPEED + (SPEED_MAX - RUN_SPEED) * t;
+}
 export const GRAVITY     = 26;
 export const JUMP_V      = 10.2;
 export const RUNNER_R    = 0.36;
@@ -670,11 +690,11 @@ export function withinReach(runnerX, runnerY, x, y){
    Kept out of the class so a test can step a runner over a hand made set of
    lines without standing up a whole room.
    ------------------------------------------------------------------------ */
-export function stepRunner(r, segs, dt){
+export function stepRunner(r, segs, dt, speed){
   if (!r.alive) return r;
 
   r.vy -= GRAVITY * dt;
-  let nx = r.x + RUN_SPEED * dt;
+  let nx = r.x + (speed === undefined ? RUN_SPEED : speed) * dt;
   let ny = r.y + r.vy * dt;
 
   r.grounded = false;
@@ -851,10 +871,11 @@ export class Board {
     });
     this.runnerId = ps[idx].id;
     this.runner = newRunner();
-    this.segs = [{ x1: -1, y1: 1.2, x2: 5.5, y2: 1.2, n: 0 }];   /* a short ledge to start on */
+    this.segs = [{ x1: -1, y1: 1.2, x2: LEDGE_END, y2: 1.2, n: 0 }];
     this.phase = 'play';
     this.result = '';
     this.lastTick = Date.now();
+    this.runAt = Date.now() + READY_MS;   /* the runner waits for this */
     this.startLoop();
     this.pushAll();
   }
@@ -876,7 +897,11 @@ export class Board {
       if (p.role === 'drawer') p.ink = Math.min(INK_MAX, p.ink + INK_REFILL * dt);
     }
 
-    stepRunner(this.runner, this.segs, dt);
+    /* during the countdown the drawer works and the runner stands still */
+    if (now >= this.runAt){
+      const secs = (now - this.runAt) / 1000;
+      stepRunner(this.runner, this.segs, dt, speedAt(secs));
+    }
 
     /* forget chalk the runner has long passed, so the room does not grow
        without limit over a long run */
@@ -925,6 +950,7 @@ export class Board {
       roster: this.players.map(o => ({ i:o.id, n:o.name, s:o.score, b:o.best, r:o.role }))
     };
     if (this.phase === 'play' || this.phase === 'result'){
+      msg.cd = Math.max(0, Math.ceil((this.runAt - Date.now()) / 1000));
       msg.r = {
         x: r2(this.runner.x), y: r2(this.runner.y),
         g: this.runner.grounded ? 1 : 0,
