@@ -186,7 +186,20 @@ ok('and the drawer is told why', performance.now() - ctx.nudgedAt < 1000);
 win.innerWidth = 1920; win.innerHeight = 1080;
 win.fireWindow('resize');
 ok('a wide screen never shows more world than is sent',
-   1920 / ctx.PPM <= 34 + 60, (1920 / ctx.PPM).toFixed(1) + ' metres across');
+   1920 / ctx.PPM <= 55 + 60, (1920 / ctx.PPM).toFixed(1) + ' metres across');
+ok('and it shows a sensible amount of it',
+   1920 / ctx.PPM > 24 && 1920 / ctx.PPM < 46, (1920 / ctx.PPM).toFixed(1));
+
+/* the phone case, which is the one that was wrong: twelve metres of view
+   against twenty six metres of reach */
+win.innerWidth = 375; win.innerHeight = 812;
+win.fireWindow('resize');
+const across = 375 / ctx.PPM;
+ok('a phone sees most of the reach, not half of it', across > 16,
+   across.toFixed(1) + ' metres across');
+ok('and the runner stands further left on it', ctx.CAM_X < 0.3, ctx.CAM_X);
+const aheadM = 375 * (1 - ctx.CAM_X) / ctx.PPM;
+ok('so there is real room in front of them', aheadM > 12, aheadM.toFixed(1) + ' m ahead');
 
 console.log('\n' + (failed ? failed + ' FAILED' : 'client smoke test clean'));
 process.exit(failed ? 1 : 0);

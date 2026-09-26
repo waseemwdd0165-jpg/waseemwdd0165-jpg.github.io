@@ -194,7 +194,10 @@ ul.list li:first-child{border-top:0}
 #ahead .roof b{color:var(--good)}
 #ahead .pit  b{color:var(--bad)}
 
-#inkwrap{position:fixed;left:14px;bottom:14px;z-index:20;width:min(220px,40vw);pointer-events:none}
+#inkwrap{
+  position:fixed;left:14px;z-index:20;width:min(220px,46vw);pointer-events:none;
+  bottom:calc(52px + env(safe-area-inset-bottom));
+}
 #inkwrap .lbl{font-size:10.5px;color:var(--dim);letter-spacing:.12em;text-transform:uppercase;margin-bottom:5px}
 #inkbar{height:8px;background:rgba(0,0,0,.4);border-radius:999px;overflow:hidden;border:1px solid var(--line)}
 #inkbar i{display:block;height:100%;background:var(--chalk);width:100%;transition:width .07s linear}
@@ -210,7 +213,10 @@ ul.list li:first-child{border-top:0}
 #tray .s2{background:#F2A6B8}
 #tray .stick.on{border-color:rgba(244,243,233,.95);transform:scale(1.12)}
 
-#pad{position:fixed;right:12px;bottom:12px;z-index:20;display:none;align-items:flex-end;gap:11px}
+#pad{
+  position:fixed;right:12px;z-index:20;display:none;align-items:flex-end;gap:11px;
+  bottom:calc(12px + env(safe-area-inset-bottom));
+}
 #pad button{
   width:104px;height:104px;border-radius:50%;padding:0;
   background:rgba(244,243,233,.12);border:2px solid rgba(244,243,233,.4);
@@ -240,8 +246,11 @@ ul.list li:first-child{border-top:0}
 #banner .big{font-family:"Caveat",cursive;font-size:clamp(50px,13vw,92px);line-height:1}
 #banner .small{color:var(--soft);font-size:14px;margin-top:2px}
 
+/* These used to sit at the top middle, where on a 375 pixel phone they
+   climbed straight over the role pill. The bottom left corner is empty for
+   the runner and directly under the chalk bar for the drawer. */
 #audiobar{
-  position:fixed;top:12px;left:50%;transform:translateX(-50%);z-index:21;
+  position:fixed;left:14px;bottom:calc(12px + env(safe-area-inset-bottom));z-index:21;
   display:none;gap:6px;
 }
 #audiobar button{
@@ -1000,22 +1009,30 @@ loadTop('top-list');
 var cv = $('cv'), ctx = cv.getContext('2d');
 var VW = 0, VH = 0, PPM = 40;
 
+var CAM_X = 0.3;
 function resize(){
   var dpr = Math.min(2, devicePixelRatio || 1);
   VW = innerWidth; VH = innerHeight;
   cv.width = Math.round(VW * dpr); cv.height = Math.round(VH * dpr);
   ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-  /* Never show more world than the server is willing to send, or chalk
-     disappears at the edges. That was a real bug, not a theory. */
+
+  /* The zoom follows the width, not the smaller side. On a tall thin phone
+     the old rule showed twelve metres, while the drawer was allowed to draw
+     twenty six ahead: half their reach was off the screen. Width based, a
+     phone shows about eighteen metres and a laptop about thirty. */
   var minPPM = VW / (SEND_BACK + SEND_FWD - 12);
-  PPM = Math.max(minPPM, Math.min(58, Math.min(VW, VH) / 12));
+  PPM = Math.max(minPPM, Math.min(48, Math.max(18, VW / 18)));
+
+  /* and on a narrow screen the runner stands further left, because what is
+     in front of them is the part that matters */
+  CAM_X = VW < 520 ? 0.26 : 0.32;
 }
 addEventListener('resize', resize);
 resize();
 
-function sx(x){ return (x - cam.x) * PPM + VW * 0.32; }
+function sx(x){ return (x - cam.x) * PPM + VW * CAM_X; }
 function sy(y){ return VH * 0.62 - (y - cam.y) * PPM; }
-function wx(px){ return (px - VW * 0.32) / PPM + cam.x; }
+function wx(px){ return (px - VW * CAM_X) / PPM + cam.x; }
 function wy(py){ return (VH * 0.62 - py) / PPM + cam.y; }
 
 var dust = [];
