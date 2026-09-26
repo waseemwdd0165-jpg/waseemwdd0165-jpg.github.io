@@ -317,6 +317,7 @@ var inGallery = false, typing = false;
    ========================================================================== */
 var scene, camera, renderer, clock;
 var wheelGroup, carouselGroup, swingGroup;
+var leafMat = null;
 
 /* ==========================================================================
    Textures
@@ -532,7 +533,8 @@ function buildTrees(){
     }
   }
   blockField(logs, mat(TEX.log));
-  blockField(leaves, mat(TEX.leaves));
+  leafMat = mat(TEX.leaves, { transparent: true, opacity: 1 });
+  blockField(leaves, leafMat);
 }
 
 function buildFence(){
@@ -1010,10 +1012,25 @@ var camReady = false;
    person view unusable. */
 function blockHeight(x, z){
   var c = cell(Math.floor(x), Math.floor(z));
-  if (c === 'T') return 7;      /* trunk plus crown */
+  if (c === 'T') return 2.6;    /* only the trunk stops the camera now */
   if (c === 'f') return 2;
   if (c === 'X') return 0.4;
   return 0;
+}
+
+/* Foliage between you and the camera is the classic third person nuisance.
+   Rather than deleting blocks, the canopy simply goes see through whenever
+   the line back to the camera passes through a tree. */
+var leafFade = 1;
+function fadeLeavesIfInTheWay(tx, ty, tz, dx, dy, dz, dist){
+  var blockedView = false;
+  for (var d = 0.8; d <= dist; d += 0.5){
+    var px = tx + dx * d, pz = tz + dz * d, py = ty + dy * d;
+    if (cell(Math.floor(px), Math.floor(pz)) === 'T' && py < 7.2){ blockedView = true; break; }
+  }
+  var want = blockedView ? 0.22 : 1;
+  leafFade += (want - leafFade) * 0.18;
+  if (leafMat) leafMat.opacity = leafFade;
 }
 
 function updateCamera(){
@@ -1036,6 +1053,7 @@ function updateCamera(){
   if (!camReady){ camera.position.copy(want); camReady = true; }
   else camera.position.lerp(want, 0.2);
   camera.lookAt(tx, ty, tz);
+  fadeLeavesIfInTheWay(tx, ty, tz, dx, dy, dz, dist);
 }
 
 function updatePrompt(){

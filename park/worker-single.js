@@ -292,7 +292,7 @@ canvas{display:block;image-rendering:pixelated}
    arrive. Your own movement is predicted locally so walking feels instant.
    ========================================================================== */
 
-var MAP = ["ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff", "fgTggggTgggggggggggTgggggggggggggggggggTTggggggggggggggggggf", "fgggggggggggggggggggggggTggggggggTTggggggggggggTgggggggggggf", "fggggggggggggggggggggggggggTgggggggggggggggggggggggggggggggf", "fggg~~~~~~~~~~~~~gggggggggTgTgggTggggTTTTggggggggggggggggggf", "fgg~~~~~~~~~~~~~~~gTggggggggggggggggTggggggTgTgggggggggggggf", "fgg~~~~~~~~~~~~~~~ggTgggTgggggggggggggggggggggggTgggTggggggf", "fgg~~~~~~~~~~~~~~~ggggggTggggggggggTggggggggggggggggTggggggf", "fgg~~~~~~~~~~~~~~~gggggggggggggTggggggggTgggggggggggggTggggf", "fgg~~~~~~~~~~~~~~~gggTggggggggggggTgTgggggggggggggggggTTgTgf", "fgTg~~~~~~~~~~~~~ggggTggTggggggggggggTggggggggggggTgTggggggf", "fgggggTggggggggggggggggggggggggggggggggggggggggggggggggggggf", "fgggggTggg........................................gTgTgggggf", "fgggTggggg........................................gggggggggf", "fggggTgggg....XXXXXXX.................XXXXXXXX....gggTgggggf", "fgggTgggTg...gXXXXXXXggggggg...gggggggXXXXXXXXg...gggggggggf", "fggggTgggg...gXXXXXXXggggggg...gggggggXXXXXXXXg...ggTggggggf", "fgTggggggg...gXXXXXXXTgg............ggXXXXXXXXg...gggggggggf", "fgTggggggg...gXXXXXXXggg.B........B.ggXXXXXXXXg...gggggggggf", "fggggggggg...gXXXFXXXggg....~~~~....ggXXXXCXXXg...gggggggggf", "fgggTggggg...ggggggggggg....~~~~....ggggggggggg...gggggggggf", "fggggggggg...ggggggggggg....~~~~....gTggggggggg...gggggggggf", "fggggggTTg...ggggggggggg.B........B.ggggggggggg...gggggggggf", "fgggTggggg...gggggggggTg............gggggggTggg...gggggggTgf", "fggggggTgg...ggggggggggggggg...gggggggggggggggg...gggggggggf", "fggggggggg........................................gggggggggf", "fgggggTggg........................................gggTgggggf", "fggggggggg....XXXXXXX.................XXXXXXXX....gggggggggf", "fgggggggggggggXXXXXXXggggggg...gggggggXXXXXXXXgggggggTgggggf", "fgggggggggggggXXXXXXXggggggg...gggggggXXXXXXXXgTggggggggTggf", "fgTgggggggggggXXXXXXXggggggg...gggggggXXXXXXXXggggggggggggTf", "fggggggTggggggXXXMXXXggggggg...gggggggXXXXSXXXgggggggggggggf", "fTggggggTgTggggggggggggggggg...ggggggggTggggggggggggggggTggf", "fgggggggTggggggggggggggggggg...ggggggggggggggTggggTggggggggf", "fgTgggggggTggTTgggggTggggggg...ggggggggggggggggggggggTgggggf", "fggggTgggTTggggggggggggggggg...gTggTgggggggggTgggggggggggggf", "fggTggTgggTgggggggggTggggggg...ggggggggggggggggggTggggggTggf", "fgggTgTgTggggggggggggggggggg...gggggggggTgTggggggggggTgggggf", "fggggggTgggggggggggggggggggg...ggggggggggTTTgggggTggggTggggf", "ffffffffffffffffffffffffffffff..ffffffffffffffffffffffffffff"];
+var MAP = ["ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff", "fgTggggTggggggggggggggggggggggggggggggggTggggggggggggggggggf", "fgggggggggggggggggggggggTggggggggTTggggggggggggggggggggggggf", "fggggggggggggggggggggggggggTgggggggggggggggggggggggggggggggf", "fggg~~~~~~~~~~~~~gggggggggTgTgggggggggTgTggggggggggggggggggf", "fgg~~~~~~~~~~~~~~~gTggggggggggggggggTggggggggggggggggggggggf", "fgg~~~~~~~~~~~~~~~ggTgggggggggggggggggggggggggggTgggTggggggf", "fgg~~~~~~~~~~~~~~~ggggggTggggggggggggggggggggggggggggggggggf", "fgg~~~~~~~~~~~~~~~ggggggggggggggggggggggTgggggggggggggTggggf", "fgg~~~~~~~~~~~~~~~gggTggggggggggggggTggggggggggggggggggTgggf", "fgTg~~~~~~~~~~~~~gggggggggggggggggggggggggggggggggggTggggggf", "fggggggggggggggggggggggggggggggggggggggggggggggggggggggggggf", "fgggggTggg........................................gggTgggggf", "fgggTggggg........................................gggggggggf", "fggggTgggg....XXXXXXX.................XXXXXXXX....gggTgggggf", "fgggTggggg...gXXXXXXXggggggg...gggggggXXXXXXXXg...gggggggggf", "fggggTgggg...gXXXXXXXggggggg...gggggggXXXXXXXXg...ggTggggggf", "fggggggggg...gXXXXXXXTgg............ggXXXXXXXXg...gggggggggf", "fgTggggggg...gXXXXXXXggg.B........B.ggXXXXXXXXg...gggggggggf", "fggggggggg...gXXXFXXXggg....~~~~....ggXXXXCXXXg...gggggggggf", "fgggTggggg...ggggggggggg....~~~~....ggggggggggg...gggggggggf", "fggggggggg...ggggggggggg....~~~~....ggggggggggg...gggggggggf", "fggggggggg...ggggggggggg.B........B.ggggggggggg...gggggggggf", "fgggTggggg...ggggggggggg............ggggggggggg...gggggggTgf", "fggggggggg...ggggggggggggggg...gggggggggggggggg...gggggggggf", "fggggggggg........................................gggggggggf", "fggggggggg........................................gggTgggggf", "fggggggggg....XXXXXXX.................XXXXXXXX....gggggggggf", "fgggggggggggggXXXXXXXggggggg...gggggggXXXXXXXXgggggggggggggf", "fgggggggggggggXXXXXXXggggggg...gggggggXXXXXXXXggggggggggTggf", "fgTgggggggggggXXXXXXXggggggg...gggggggXXXXXXXXgggggggggggggf", "fggggggTggggggXXXMXXXggggggg...gggggggXXXXSXXXgggggggggggggf", "fTggggggTggggggggggggggggggg...ggggggggTggggggggggggggggTggf", "fggggggggggggggggggggggggggg...ggggggggggggggTggggTggggggggf", "fgggggggggTggTggggggTggggggg...ggggggggggggggggggggggTgggggf", "fggggggggTgggggggggggggggggg...ggggggggggggggggggggggggggggf", "fggTggggggTgggggggggTggggggg...ggggggggggggggggggggggggggggf", "fgggTgTgTggggggggggggggggggg...ggggggggggggggggggggggTgggggf", "fggggggTgggggggggggggggggggg...gggggggggggTggggggTggggTggggf", "ffffffffffffffffffffffffffffff..ffffffffffffffffffffffffffff"];
 var MW = MAP[0].length, MH = MAP.length;
 var SOLID = 'fT~X';
 function cell(x,y){ if(x<0||y<0||x>=MW||y>=MH) return 'f'; return MAP[y][x]; }
@@ -324,6 +324,7 @@ var inGallery = false, typing = false;
    ========================================================================== */
 var scene, camera, renderer, clock;
 var wheelGroup, carouselGroup, swingGroup;
+var leafMat = null;
 
 /* ==========================================================================
    Textures
@@ -539,7 +540,8 @@ function buildTrees(){
     }
   }
   blockField(logs, mat(TEX.log));
-  blockField(leaves, mat(TEX.leaves));
+  leafMat = mat(TEX.leaves, { transparent: true, opacity: 1 });
+  blockField(leaves, leafMat);
 }
 
 function buildFence(){
@@ -1017,10 +1019,25 @@ var camReady = false;
    person view unusable. */
 function blockHeight(x, z){
   var c = cell(Math.floor(x), Math.floor(z));
-  if (c === 'T') return 7;      /* trunk plus crown */
+  if (c === 'T') return 2.6;    /* only the trunk stops the camera now */
   if (c === 'f') return 2;
   if (c === 'X') return 0.4;
   return 0;
+}
+
+/* Foliage between you and the camera is the classic third person nuisance.
+   Rather than deleting blocks, the canopy simply goes see through whenever
+   the line back to the camera passes through a tree. */
+var leafFade = 1;
+function fadeLeavesIfInTheWay(tx, ty, tz, dx, dy, dz, dist){
+  var blockedView = false;
+  for (var d = 0.8; d <= dist; d += 0.5){
+    var px = tx + dx * d, pz = tz + dz * d, py = ty + dy * d;
+    if (cell(Math.floor(px), Math.floor(pz)) === 'T' && py < 7.2){ blockedView = true; break; }
+  }
+  var want = blockedView ? 0.22 : 1;
+  leafFade += (want - leafFade) * 0.18;
+  if (leafMat) leafMat.opacity = leafFade;
 }
 
 function updateCamera(){
@@ -1043,6 +1060,7 @@ function updateCamera(){
   if (!camReady){ camera.position.copy(want); camReady = true; }
   else camera.position.lerp(want, 0.2);
   camera.lookAt(tx, ty, tz);
+  fadeLeavesIfInTheWay(tx, ty, tz, dx, dy, dz, dist);
 }
 
 function updatePrompt(){
@@ -1339,44 +1357,44 @@ $('name').addEventListener('keydown', function(e){ if (e.key === 'Enter') $('ent
    ------------------------------------------------------------------------ */
 export const MAP = [
   "ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff",
-  "fgTggggTgggggggggggTgggggggggggggggggggTTggggggggggggggggggf",
-  "fgggggggggggggggggggggggTggggggggTTggggggggggggTgggggggggggf",
+  "fgTggggTggggggggggggggggggggggggggggggggTggggggggggggggggggf",
+  "fgggggggggggggggggggggggTggggggggTTggggggggggggggggggggggggf",
   "fggggggggggggggggggggggggggTgggggggggggggggggggggggggggggggf",
-  "fggg~~~~~~~~~~~~~gggggggggTgTgggTggggTTTTggggggggggggggggggf",
-  "fgg~~~~~~~~~~~~~~~gTggggggggggggggggTggggggTgTgggggggggggggf",
-  "fgg~~~~~~~~~~~~~~~ggTgggTgggggggggggggggggggggggTgggTggggggf",
-  "fgg~~~~~~~~~~~~~~~ggggggTggggggggggTggggggggggggggggTggggggf",
-  "fgg~~~~~~~~~~~~~~~gggggggggggggTggggggggTgggggggggggggTggggf",
-  "fgg~~~~~~~~~~~~~~~gggTggggggggggggTgTgggggggggggggggggTTgTgf",
-  "fgTg~~~~~~~~~~~~~ggggTggTggggggggggggTggggggggggggTgTggggggf",
-  "fgggggTggggggggggggggggggggggggggggggggggggggggggggggggggggf",
-  "fgggggTggg........................................gTgTgggggf",
+  "fggg~~~~~~~~~~~~~gggggggggTgTgggggggggTgTggggggggggggggggggf",
+  "fgg~~~~~~~~~~~~~~~gTggggggggggggggggTggggggggggggggggggggggf",
+  "fgg~~~~~~~~~~~~~~~ggTgggggggggggggggggggggggggggTgggTggggggf",
+  "fgg~~~~~~~~~~~~~~~ggggggTggggggggggggggggggggggggggggggggggf",
+  "fgg~~~~~~~~~~~~~~~ggggggggggggggggggggggTgggggggggggggTggggf",
+  "fgg~~~~~~~~~~~~~~~gggTggggggggggggggTggggggggggggggggggTgggf",
+  "fgTg~~~~~~~~~~~~~gggggggggggggggggggggggggggggggggggTggggggf",
+  "fggggggggggggggggggggggggggggggggggggggggggggggggggggggggggf",
+  "fgggggTggg........................................gggTgggggf",
   "fgggTggggg........................................gggggggggf",
   "fggggTgggg....XXXXXXX.................XXXXXXXX....gggTgggggf",
-  "fgggTgggTg...gXXXXXXXggggggg...gggggggXXXXXXXXg...gggggggggf",
+  "fgggTggggg...gXXXXXXXggggggg...gggggggXXXXXXXXg...gggggggggf",
   "fggggTgggg...gXXXXXXXggggggg...gggggggXXXXXXXXg...ggTggggggf",
-  "fgTggggggg...gXXXXXXXTgg............ggXXXXXXXXg...gggggggggf",
+  "fggggggggg...gXXXXXXXTgg............ggXXXXXXXXg...gggggggggf",
   "fgTggggggg...gXXXXXXXggg.B........B.ggXXXXXXXXg...gggggggggf",
   "fggggggggg...gXXXFXXXggg....~~~~....ggXXXXCXXXg...gggggggggf",
   "fgggTggggg...ggggggggggg....~~~~....ggggggggggg...gggggggggf",
-  "fggggggggg...ggggggggggg....~~~~....gTggggggggg...gggggggggf",
-  "fggggggTTg...ggggggggggg.B........B.ggggggggggg...gggggggggf",
-  "fgggTggggg...gggggggggTg............gggggggTggg...gggggggTgf",
-  "fggggggTgg...ggggggggggggggg...gggggggggggggggg...gggggggggf",
+  "fggggggggg...ggggggggggg....~~~~....ggggggggggg...gggggggggf",
+  "fggggggggg...ggggggggggg.B........B.ggggggggggg...gggggggggf",
+  "fgggTggggg...ggggggggggg............ggggggggggg...gggggggTgf",
+  "fggggggggg...ggggggggggggggg...gggggggggggggggg...gggggggggf",
   "fggggggggg........................................gggggggggf",
-  "fgggggTggg........................................gggTgggggf",
+  "fggggggggg........................................gggTgggggf",
   "fggggggggg....XXXXXXX.................XXXXXXXX....gggggggggf",
-  "fgggggggggggggXXXXXXXggggggg...gggggggXXXXXXXXgggggggTgggggf",
-  "fgggggggggggggXXXXXXXggggggg...gggggggXXXXXXXXgTggggggggTggf",
-  "fgTgggggggggggXXXXXXXggggggg...gggggggXXXXXXXXggggggggggggTf",
+  "fgggggggggggggXXXXXXXggggggg...gggggggXXXXXXXXgggggggggggggf",
+  "fgggggggggggggXXXXXXXggggggg...gggggggXXXXXXXXggggggggggTggf",
+  "fgTgggggggggggXXXXXXXggggggg...gggggggXXXXXXXXgggggggggggggf",
   "fggggggTggggggXXXMXXXggggggg...gggggggXXXXSXXXgggggggggggggf",
-  "fTggggggTgTggggggggggggggggg...ggggggggTggggggggggggggggTggf",
-  "fgggggggTggggggggggggggggggg...ggggggggggggggTggggTggggggggf",
-  "fgTgggggggTggTTgggggTggggggg...ggggggggggggggggggggggTgggggf",
-  "fggggTgggTTggggggggggggggggg...gTggTgggggggggTgggggggggggggf",
-  "fggTggTgggTgggggggggTggggggg...ggggggggggggggggggTggggggTggf",
-  "fgggTgTgTggggggggggggggggggg...gggggggggTgTggggggggggTgggggf",
-  "fggggggTgggggggggggggggggggg...ggggggggggTTTgggggTggggTggggf",
+  "fTggggggTggggggggggggggggggg...ggggggggTggggggggggggggggTggf",
+  "fggggggggggggggggggggggggggg...ggggggggggggggTggggTggggggggf",
+  "fgggggggggTggTggggggTggggggg...ggggggggggggggggggggggTgggggf",
+  "fggggggggTgggggggggggggggggg...ggggggggggggggggggggggggggggf",
+  "fggTggggggTgggggggggTggggggg...ggggggggggggggggggggggggggggf",
+  "fgggTgTgTggggggggggggggggggg...ggggggggggggggggggggggTgggggf",
+  "fggggggTgggggggggggggggggggg...gggggggggggTggggggTggggTggggf",
   "ffffffffffffffffffffffffffffff..ffffffffffffffffffffffffffff"
 ];
 
