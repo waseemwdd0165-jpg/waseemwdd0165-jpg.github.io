@@ -548,7 +548,7 @@ export class Board {
         id: 'p' + (++this.seq),
         key: seatKey(),
         name: cleanName(m.name),
-        ws, gone: 0, role: 'drawer', ink: INK_MAX, score: 0, best: 0
+        ws, gone: 0, role: 'drawer', ink: INK_MAX, score: 0, best: 0, chalk: 0
       };
       this.players.push(p);
       this.sockets.set(ws, p);
@@ -591,6 +591,13 @@ export class Board {
     }
     if (m.t === 'brake' && this.phase === 'play' && p.role === 'runner'){
       pullBrake(this.runner);
+      return;
+    }
+    /* which stick of chalk they picked up. It travels so that both people see
+       the same colour on the board, rather than only the one who chose it. */
+    if (m.t === 'chalk'){
+      const i = Number(m.i);
+      if (i === 0 || i === 1 || i === 2){ p.chalk = i; this.pushAll(); }
       return;
     }
     if (m.t === 'draw' && this.phase === 'play' && p.role === 'drawer'){
@@ -833,6 +840,9 @@ export class Board {
                                        r:o.role, off:o.gone ? 1 : 0 }))
     };
     if (this.phase === 'over') msg.hist = this.history || [];
+    /* the colour the chalk is being drawn in, so both people see one board */
+    const pen = this.players.find(o => o.role === 'drawer');
+    msg.ic = pen ? (pen.chalk || 0) : 0;
     const waiting = this.waitingFor();
     if (waiting){
       msg.held = waiting.name;

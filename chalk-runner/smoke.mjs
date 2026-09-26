@@ -60,6 +60,30 @@ const S = ctx.onServer, btn = { disabled:false, textContent:'' };
 
 S({ t:'state', ph:'lobby', host:true, role:'drawer', solo:false, ink:34, inkMax:34,
     result:'', round:0, rounds:4, roster:[{i:'p1',n:'Ann',s:0,b:0,r:'drawer'}] }, btn, true, '');
+/* the look ahead strip, the chalk tray and the QR */
+S(base({ ph:'play', role:'drawer', o:[[0, 20, 2.1], [2, 48, 3.4]],
+  r:{ x:12, y:1.6, g:1, a:1, d:10, lp:0, fl:0, bk:0, bc:0, lv:1, ms:50, sp:4.6 } }), btn, true, '');
+ok('the drawer is told what is coming', /wall/.test(E('ahead').innerHTML), E('ahead').innerHTML);
+ok('with how high to build', /2.1 m high/.test(E('ahead').innerHTML));
+ok('and how far off it is', /in 8 m/.test(E('ahead').innerHTML), E('ahead').innerHTML);
+ok('the one after it too', /no chalk/.test(E('ahead').innerHTML));
+ok('and nothing already passed', !/in -/.test(E('ahead').innerHTML));
+
+ok('there are three sticks of chalk', ctx.CHALKS.length === 3);
+ok('the board follows the drawer, not the watcher', (function(){
+  ctx.chalkPick = 2;
+  const used = [];
+  const fake = { lineCap:'', lineJoin:'', strokeStyle:'', lineWidth:0,
+                 stroke(){ used.push(this.strokeStyle); } };
+  ctx.strokeChalk(fake, {}, 9, 3, 1);
+  return used[1] === ctx.CHALKS[1].hard;
+})());
+
+ok('a QR of the join link builds', (function(){
+  const q = ctx.QR.build('https://chalk-runner.test/?room=ABCD');
+  return !!q && q.size === 17 + q.version * 4;
+})());
+
 ok('the lobby renders', /Ann/.test(E('lobby-players').innerHTML), E('lobby-players').innerHTML);
 
 S(base({ cd:3 }), btn, true, '');

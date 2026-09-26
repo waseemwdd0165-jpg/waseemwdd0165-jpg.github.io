@@ -15,6 +15,9 @@ export function makeWindow(){
                         want?cls.add(c):cls.delete(c); return want; }
       },
       _children:{},
+      _attr:{},
+      getAttribute(k){ return k in el._attr ? el._attr[k] : null; },
+      setAttribute(k,v){ el._attr[k] = String(v); },
       addEventListener(t,f){ (el._l = el._l||{})[t] = (el._l[t]||[]).concat(f); },
       removeEventListener(){}, focus(){}, setPointerCapture(){},
       getContext(){ return CTX; },
@@ -35,7 +38,16 @@ export function makeWindow(){
   const els = {};
   const document = {
     getElementById(id){ return els[id] || (els[id] = El(id)); },
-    addEventListener(){}, createElement(t){ return El('new-'+t); }
+    addEventListener(){}, createElement(t){ return El('new-'+t); },
+    /* only ever used for the chalk tray, which is a fixed little set */
+    querySelectorAll(sel){
+      if (/#tray/.test(sel)) return [0,1,2].map(i => {
+        const e = El('stick-' + i);
+        e.getAttribute = k => k === 'data-ink' ? String(i) : null;
+        return e;
+      });
+      return [];
+    }
   };
   const node = () => ({ connect(){}, disconnect(){},
     gain:{ value:0.1, setValueAtTime(){}, exponentialRampToValueAtTime(){}, cancelScheduledValues(){} },
