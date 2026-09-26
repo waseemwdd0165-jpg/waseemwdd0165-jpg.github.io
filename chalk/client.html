@@ -408,7 +408,9 @@ function frame(){
   var dt = Math.min(0.1, (now - (frame.last || now)) / 1000);
   frame.last = now;
 
-  if (Math.abs(r.x - cam.x) > 18 || Math.abs(r.y - cam.y) > 14){
+  /* A low frame rate stretches the chase out, so cut rather than crawl once
+     the runner is further away than the screen can comfortably hold. */
+  if (Math.abs(r.x - cam.x) > 7 || Math.abs(r.y - cam.y) > 6){
     cam.x = r.x; cam.y = r.y;
   } else {
     var kx = 1 - Math.pow(0.0001, dt);     /* about a tenth of a second */
