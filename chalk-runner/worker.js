@@ -670,6 +670,7 @@ export class Board {
   /* ---------- rounds ---------------------------------------------------------- */
   startMatch(){
     this.round = 0;
+    this.history = [];
     this.players.forEach(p => { p.score = 0; p.best = 0; });
     this.beginRound();
   }
@@ -790,6 +791,15 @@ export class Board {
     drawers.forEach(p => { p.score += d; });
     this.result = why || (d + ' metres');
 
+    /* the end screen is nothing without the rounds that made it */
+    if (!this.history) this.history = [];
+    this.history.push({
+      r: this.round + 1,
+      n: runner ? runner.name : '',
+      w: drawers.length ? drawers[0].name : '',
+      d: d
+    });
+
     /* a solo run is practice and does not go on the board */
     if (!this.solo && runner && d > 0){
       const mate = drawers.length ? drawers[0].name : '';
@@ -822,6 +832,7 @@ export class Board {
       roster: this.players.map(o => ({ i:o.id, n:o.name, s:o.score, b:o.best,
                                        r:o.role, off:o.gone ? 1 : 0 }))
     };
+    if (this.phase === 'over') msg.hist = this.history || [];
     const waiting = this.waitingFor();
     if (waiting){
       msg.held = waiting.name;

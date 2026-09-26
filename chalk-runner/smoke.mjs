@@ -108,11 +108,19 @@ ok('the picture can be built without throwing', (function(){
 
 S({ t:'state', ph:'over', host:true, role:'runner', solo:false, ink:34, inkMax:34, result:'',
   round:4, rounds:4,
+  hist:[{r:1,n:'Ann',w:'Bob',d:155},{r:2,n:'Bob',w:'Ann',d:135}],
   roster:[{i:'p1',n:'Ann',s:290,b:155,r:'runner'},{i:'p2',n:'Bob',s:290,b:135,r:'drawer'}] }, btn, true, '');
 await new Promise(r=>setTimeout(r,150));
 const rec = E('over-record').innerHTML;
 ok('the end screen names the gap to the record', /157 m/.test(rec) && /312 m/.test(rec), rec);
-ok('the end list shows the best run', /best run 155/.test(E('over-list').innerHTML), E('over-list').innerHTML);
+ok('a team score is not called a lead',
+   !/leads/.test(E('over-sub').textContent) && /Together/.test(E('over-sub').textContent),
+   E('over-sub').textContent);
+ok('and it names the furthest single run',
+   /Ann, 155 m/.test(E('over-sub').textContent), E('over-sub').textContent);
+ok('the end list shows the furthest run', /furthest 155/.test(E('over-list').innerHTML), E('over-list').innerHTML);
+ok('and the rounds are listed', /drawn by Bob/.test(E('over-rounds').innerHTML), E('over-rounds').innerHTML);
+ok('the gate gets out of its own way once a match is on', E('gate').classList.contains('busy'));
 ok('the stored board is on the end screen', /Cat/.test(E('top-list-2').innerHTML), E('top-list-2').innerHTML);
 ok('and the picture is offered', !E('btn-card').classList.contains('hidden'));
 
