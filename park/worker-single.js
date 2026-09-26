@@ -65,7 +65,7 @@ canvas{display:block;image-rendering:pixelated}
 }
 /* a row of blocky clouds drifting past */
 #gate::before{
-  content:"";position:absolute;top:8%;left:-40%;width:180%;height:120px;
+  content:"";position:absolute;z-index:0;top:8%;left:-40%;width:180%;height:120px;
   background:
     linear-gradient(#fff,#fff) 4% 20%/140px 34px no-repeat,
     linear-gradient(#fff,#fff) 10% 44%/210px 34px no-repeat,
@@ -78,8 +78,8 @@ canvas{display:block;image-rendering:pixelated}
 @keyframes clouds{ to{ transform:translateX(22%) } }
 
 #gate .box{
-  position:relative;max-width:380px;width:100%;
-  background:rgba(16,16,16,.84);
+  position:relative;z-index:1;max-width:380px;width:100%;
+  background:#141414;
   border-top:4px solid #6E6E6E; border-left:4px solid #6E6E6E;
   border-bottom:4px solid #1C1C1C; border-right:4px solid #1C1C1C;
   outline:3px solid #0B0B0B;
@@ -110,9 +110,10 @@ canvas{display:block;image-rendering:pixelated}
   border-bottom-color:#77C457;border-right-color:#77C457;
 }
 #gate button:disabled{ opacity:.55;cursor:not-allowed }
-#gate .err{ color:#FF7A7A;font-size:16px;margin-top:10px;min-height:20px }
+#gate .err{ color:#FF7A7A;font-size:16px;margin-top:10px }
+#gate .err.hidden{ display:none }
 #gate .tips{
-  margin-top:16px;padding-top:14px;border-top:3px solid #2E2E2E;
+  margin-top:14px;padding-top:12px;border-top:3px solid #2E2E2E;
   color:#C4C4C4;font-size:16px;line-height:1.5;text-align:left;
 }
 #gate .tips div{ margin-bottom:5px }
@@ -251,7 +252,7 @@ canvas{display:block;image-rendering:pixelated}
     <p>Everyone who is online is in the same park. Walk in and say hello.</p>
     <input id="name" maxlength="12" placeholder="Your name" autocomplete="off" spellcheck="false" autocapitalize="off" autocorrect="off">
     <button id="enter">Walk in</button>
-    <div class="err" id="gate-err"></div>
+    <div class="err hidden" id="gate-err"></div>
     <div class="tips">
       <div><b>Move</b> with W A S D, arrows, or the stick.</div>
       <div><b>Look</b> around by dragging anywhere.</div>
@@ -326,6 +327,11 @@ var STALL = { x: 30.0, z: 25.0 };     /* balloon stall, on the plaza path */
 var FOUNTAIN = { x: 30.0, z: 20.0 };
 
 var $ = function(id){ return document.getElementById(id); };
+function gateErr(msg){
+  var el = $('gate-err');
+  el.textContent = msg || '';
+  el.classList.toggle('hidden', !msg);
+}
 
 /* ---------- state ---------- */
 var ws = null, myId = null, myName = '', myHue = 40;
@@ -848,7 +854,7 @@ function connect(name){
   ws = new WebSocket(proto + '//' + location.host + '/api/ws');
   var settled = false;
   var giveUp = setTimeout(function(){
-    if (!settled){ $('gate-err').textContent = 'The park is not answering. Check your connection.'; $('enter').disabled = false; }
+    if (!settled){ gateErr('The park is not answering. Check your connection.'); $('enter').disabled = false; }
   }, 12000);
 
   ws.onopen = function(){
@@ -858,7 +864,7 @@ function connect(name){
   };
   ws.onmessage = function(e){
     var m; try { m = JSON.parse(e.data); } catch(_){ return; }
-    if (m.t === 'busy'){ $('gate-err').textContent = 'The park is full right now. Try again shortly.'; $('enter').disabled = false; return; }
+    if (m.t === 'busy'){ gateErr('The park is full right now. Try again shortly.'); $('enter').disabled = false; return; }
     if (m.t === 'you'){
       myId = m.id; myName = m.name; myHue = m.hue;
       $('who').textContent = m.name;
@@ -870,7 +876,7 @@ function connect(name){
   ws.onerror = function(){
     if (settled) return;
     clearTimeout(giveUp);
-    $('gate-err').textContent = 'Could not reach the park.';
+    gateErr('Could not reach the park.');
     $('enter').disabled = false;
   };
   ws.onclose = function(){ if (settled) $('who').textContent = 'lost the park - reload'; };
@@ -1340,8 +1346,8 @@ $('chatinput').addEventListener('keydown', function(e){
 /* ---------- in we go ---------- */
 $('enter').onclick = function(){
   var n = ($('name').value || '').trim().slice(0, 12);
-  if (!n){ $('gate-err').textContent = 'Type a name first.'; return; }
-  $('gate-err').textContent = '';
+  if (!n){ gateErr('Type a name first.'); return; }
+  gateErr('');
   $('enter').disabled = true;
   if (!renderer) { init3D(); frame(); }
   connect(n);
