@@ -272,6 +272,7 @@ ul.list li:first-child{border-top:0}
           <p id="over-sub"></p>
           <div class="record" id="over-record"></div>
           <ul class="list" id="over-list"></ul>
+          <div class="row"><button class="ghost hidden" id="btn-card">Save the picture</button></div>
           <div class="row" id="over-controls"><button id="btn-again">Play again</button></div>
           <div class="status hidden" id="over-wait">Waiting for the host</div>
         </div>
@@ -677,6 +678,7 @@ function onServer(m, btn, create, label){
   if (m.ph === 'play' && wasPh !== 'play' && wasPh !== 'result'){
     recordBefore = topRows.length ? topRows[0].m : 0;
     recordSeen = true;
+    if (wasPh === 'lobby' || wasPh === 'over' || !wasPh) bestRun = null;
   }
   view = m;
   role = m.role;
@@ -691,6 +693,7 @@ function onServer(m, btn, create, label){
   }
   else {
     if (wasPh !== 'play' && wasPh !== 'result'){ camReady = false; smooth = null; localSegs.length = 0; }
+    if (m.ph === 'result' && wasPh !== 'result' && m.rp && m.rp.length > 3) startReplay(m);
     showBoard();
     if (m.ph === 'play' && m.r && m.r.a) music.start();
     renderHud(m);
@@ -735,9 +738,13 @@ function renderHud(m){
            'Everything is paused. ' + m.hold + ' seconds before the round goes on without them.');
     lastCd = 99;
   } else if (m.ph === 'result'){
-    $('banner-big').textContent = m.result;
-    $('banner-small').textContent = m.solo ? 'Going again' : 'Next round in a moment';
-    $('banner').style.display = 'block';
+    /* while the run is being played back the board says it all */
+    if (replay){ $('banner').style.display = 'none'; }
+    else {
+      $('banner-big').textContent = m.result;
+      $('banner-small').textContent = m.solo ? 'Going again' : 'Next round in a moment';
+      $('banner').style.display = 'block';
+    }
   } else if (m.cd > 0){
     $('banner-big').textContent = m.cd;
     $('banner-small').textContent = role === 'drawer'
@@ -796,6 +803,7 @@ function renderOver(){
   var host = view && view.host;
   $('over-controls').classList.toggle('hidden', !host);
   $('over-wait').classList.toggle('hidden', !!host);
+  $('btn-card').classList.toggle('hidden', !bestRun);
   renderRecord(topRows);
 }
 
@@ -967,8 +975,97 @@ function liveSegs(){
   return { solid: solid, going: going, dim: Math.max(0, Math.min(1, dim)) };
 }
 
+/* ==========================================================================
+   The replay
+
+   A round ends with a number, which tells you nothing about the run. So the
+   board pulls back to show the whole thing and draws the path the runner
+   actually took, ending where they fell. The same shape becomes the picture
+   you can send somebody.
+   ========================================================================== */
+var replay = null, bestRun = null;
+
+function startReplay(m){
+  var dist = (m.r && m.r.d) || 0;
+  replay = { path: m.rp, obs: m.ro || [], dist: dist,
+             who: m.rn || '', code: m.rc || code, at: performance.now() };
+  if (!bestRun || dist > bestRun.dist) bestRun = replay;
+  $('btn-card').classList.toggle('hidden', !bestRun);
+}
+
+/* draw a run into any context, scaled to fit the box. Used by both the
+   replay on the board and the picture that gets saved. */
+function paintRun(c, run, x0, y0, w, h, upto){
+  var path = run.path;
+  if (!path || path.length < 2) return;
+  var minX = path[0][0], maxX = path[0][0], minY = path[0][1], maxY = path[0][1];
+  for (var i = 1; i < path.length; i++){
+    if (path[i][0] < minX) minX = path[i][0];
+    if (path[i][0] > maxX) maxX = path[i][0];
+    if (path[i][1] < minY) minY = path[i][1];
+    if (path[i][1] > maxY) maxY = path[i][1];
+  }
+  var spanX = Math.max(8, maxX - minX), spanY = Math.max(5, maxY - minY);
+  var k = Math.min(w / (spanX * 1.04), h / (spanY * 2.6));
+  var px = function(x){ return x0 + (x - minX) * k + (w - spanX * k) / 2; };
+  var py = function(y){ return y0 + h * 0.58 - (y - (minY + maxY) / 2) * k; };
+
+  /* what was in the way, marked along the bottom */
+  c.save();
+  for (var j = 0; j < run.obs.length; j++){
+    var o = run.obs[j];
+    var ox = px(o[1]);
+    if (ox < x0 - 10 || ox > x0 + w + 10) continue;
+    c.globalAlpha = 0.75;
+    if (o[0] === 2){
+      c.fillStyle = 'rgba(232,119,107,.35)';
+      c.fillRect(ox, y0, Math.max(2, o[2] * k), h);
+    } else {
+      c.strokeStyle = o[0] === 0 ? 'rgba(244,243,233,.45)' : 'rgba(159,215,154,.45)';
+      c.lineWidth = 2;
+      c.beginPath();
+      if (o[0] === 0){ c.moveTo(ox, py(0)); c.lineTo(ox, py(o[2])); }
+      else { c.moveTo(ox, py(o[2])); c.lineTo(ox, py(o[2] + 2)); }
+      c.stroke();
+    }
+  }
+  c.restore();
+
+  var shown = Math.max(2, Math.floor(path.length * Math.max(0, Math.min(1, upto))));
+  var p = new Path2D();
+  p.moveTo(px(path[0][0]), py(path[0][1]));
+  for (var q = 1; q < shown; q++) p.lineTo(px(path[q][0]), py(path[q][1]));
+  c.lineCap = 'round'; c.lineJoin = 'round';
+  c.strokeStyle = 'rgba(244,243,233,.20)'; c.lineWidth = 9; c.stroke(p);
+  c.strokeStyle = 'rgba(244,243,233,.95)'; c.lineWidth = 3; c.stroke(p);
+
+  var head = path[shown - 1];
+  c.fillStyle = upto >= 1 ? 'rgba(232,119,107,.95)' : 'rgba(245,185,115,.95)';
+  c.beginPath(); c.arc(px(head[0]), py(head[1]), 5, 0, Math.PI * 2); c.fill();
+  if (upto >= 1){
+    c.font = '700 20px "Caveat", cursive';
+    c.fillStyle = 'rgba(232,119,107,.95)';
+    c.textAlign = 'center';
+    c.fillText('fell here', px(head[0]), py(head[1]) + 26);
+  }
+}
+
 function frame(){
   requestAnimationFrame(frame);
+
+  /* the round is over: show what happened instead of where the body landed */
+  if (view && view.ph === 'result' && replay){
+    paintBoard(ctx, VW, VH);
+    var t = (performance.now() - replay.at) / 2600;
+    paintRun(ctx, replay, VW * 0.06, VH * 0.18, VW * 0.88, VH * 0.5, t);
+    ctx.font = '700 15px "Inter", sans-serif';
+    ctx.fillStyle = 'rgba(244,243,233,.5)';
+    ctx.textAlign = 'center';
+    ctx.fillText((replay.who ? replay.who + ' ran ' : '') + replay.dist + ' metres',
+                 VW / 2, VH * 0.82);
+    return;
+  }
+
   if (!view || !view.r || (view.ph !== 'play' && view.ph !== 'result')){
     paintBoard(ctx, VW, VH);
     return;
@@ -996,7 +1093,7 @@ function frame(){
   paintBoard(ctx, VW, VH);
   drawMilestones(r);
   drawPits();
-  if (role === 'drawer') drawReach(r);
+  if (role === 'drawer'){ drawReach(r); drawHint(r); }
   var live = liveSegs();
   strokeChalk(ctx, chalkPath(live.solid, sx, sy), 11, 4.5);
   if (live.going.length){
@@ -1127,6 +1224,47 @@ function drawBlocks(){
     ctx.lineWidth = 3;
     ctx.strokeRect(x0, y0, x1 - x0, y1 - y0);
   }
+  ctx.restore();
+}
+
+/* ==========================================================================
+   The first four seconds
+
+   Somebody opening this for the first time has a countdown to work out that
+   they are meant to drag. So on a first visit a ghost line draws itself in
+   front of the runner, over and over, until they have played a round.
+   ========================================================================== */
+var taught = false;
+try { taught = localStorage.getItem('cr.taught') === '1'; } catch(_){}
+function learnt(){
+  if (taught) return;
+  taught = true;
+  try { localStorage.setItem('cr.taught', '1'); } catch(_){}
+}
+function drawHint(r){
+  if (taught || !view || view.cd <= 0) return;
+  var loop = 1.9;
+  var u = (performance.now() / 1000 % loop) / loop;
+  var x0 = r.x + 2.5, x1 = r.x + 13;
+  var upto = x0 + (x1 - x0) * Math.min(1, u * 1.35);
+  ctx.save();
+  ctx.globalAlpha = u > 0.82 ? (1 - u) / 0.18 : 1;
+  ctx.setLineDash([9, 9]);
+  ctx.strokeStyle = 'rgba(245,185,115,.85)';
+  ctx.lineWidth = 4; ctx.lineCap = 'round';
+  ctx.beginPath();
+  ctx.moveTo(sx(x0), sy(1.2));
+  ctx.lineTo(sx(upto), sy(1.2));
+  ctx.stroke();
+  ctx.setLineDash([]);
+  ctx.beginPath();
+  ctx.arc(sx(upto), sy(1.2), 9, 0, Math.PI * 2);
+  ctx.fillStyle = 'rgba(245,185,115,.85)';
+  ctx.fill();
+  ctx.font = '700 26px "Caveat", cursive';
+  ctx.fillStyle = 'rgba(245,185,115,.95)';
+  ctx.textAlign = 'center';
+  ctx.fillText('drag like this to lay chalk', sx((x0 + x1) / 2), sy(1.2) - 34);
   ctx.restore();
 }
 
@@ -1293,6 +1431,7 @@ cv.addEventListener('pointerdown', function(e){
   if (role === 'runner'){ sendJump(); return; }
   if (!view || view.ph !== 'play') return;
   drawing = true; penId = e.pointerId; pending = [wx(e.clientX), wy(e.clientY)];
+  learnt();
   cv.setPointerCapture(e.pointerId);
 });
 /* A fast drag jumps several metres between two pointer events, and the server
@@ -1383,6 +1522,78 @@ $('btn-join').onclick = function(){
   joinErr(''); audio();
   connect(rc, ($('host-name').value || 'Player').trim().slice(0,12) || 'Player', false, false);
 };
+
+/* ==========================================================================
+   The picture
+
+   The same run, drawn once at poster size onto its own canvas, so there is
+   something to send somebody other than a number. No library: the card is
+   the board, the path, and the words.
+   ========================================================================== */
+function makeCard(run){
+  var W = 1080, H = 1080;
+  var cc = document.createElement('canvas');
+  cc.width = W; cc.height = H;
+  var c = cc.getContext('2d');
+
+  c.fillStyle = '#2E5B49'; c.fillRect(0, 0, W, H);
+  for (var i = 0; i < dust.length; i++){
+    var d = dust[i];
+    c.fillStyle = 'rgba(244,243,233,' + d.a + ')';
+    c.beginPath(); c.arc(d.x * W, d.y * H, d.r * 30, 0, Math.PI * 2); c.fill();
+  }
+  var g = c.createLinearGradient(0, 0, 0, H);
+  g.addColorStop(0, 'rgba(255,255,255,.05)');
+  g.addColorStop(1, 'rgba(0,0,0,.22)');
+  c.fillStyle = g; c.fillRect(0, 0, W, H);
+
+  c.textAlign = 'center';
+  c.fillStyle = 'rgba(244,243,233,.98)';
+  c.font = '700 96px "Caveat", cursive';
+  c.fillText('Chalk Runner', W / 2, 128);
+  c.fillStyle = 'rgba(245,185,115,.95)';
+  c.font = '600 44px "Caveat", cursive';
+  c.fillText('One step ahead', W / 2, 180);
+
+  paintRun(c, run, 70, 250, W - 140, 400, 1);
+
+  c.fillStyle = 'rgba(244,243,233,.98)';
+  c.font = '700 190px "Caveat", cursive';
+  c.fillText(run.dist + ' m', W / 2, 810);
+  c.fillStyle = 'rgba(244,243,233,.70)';
+  c.font = '500 36px "Inter", sans-serif';
+  c.fillText(run.who ? run.who + ' ran it' : 'a run', W / 2, 872);
+  c.fillStyle = 'rgba(244,243,233,.45)';
+  c.font = '500 30px "Inter", sans-serif';
+  c.fillText('chalk-runner.waseemwdd0165.workers.dev', W / 2, 990);
+  if (run.code){
+    c.fillStyle = 'rgba(245,185,115,.75)';
+    c.font = '600 32px "Inter", sans-serif';
+    c.fillText('board ' + run.code, W / 2, 1038);
+  }
+  return cc;
+}
+
+function saveCard(){
+  if (!bestRun) return;
+  var cc = makeCard(bestRun);
+  cc.toBlob(function(blob){
+    if (!blob) return;
+    var file = null;
+    try { file = new File([blob], 'chalk-runner.png', { type:'image/png' }); } catch(_){}
+    if (file && navigator.canShare && navigator.canShare({ files:[file] })){
+      navigator.share({ files:[file], title:'Chalk Runner',
+                        text: bestRun.dist + ' metres on Chalk Runner' }).catch(function(){});
+      return;
+    }
+    var url = URL.createObjectURL(blob);
+    var a = document.createElement('a');
+    a.href = url; a.download = 'chalk-runner-' + bestRun.dist + 'm.png';
+    a.click();
+    setTimeout(function(){ URL.revokeObjectURL(url); }, 4000);
+  }, 'image/png');
+}
+$('btn-card').onclick = saveCard;
 
 /* the two things that used to sit below the fold */
 function sheet(which){

@@ -13,6 +13,7 @@
 import { Board, stepRunner, newRunner, segDistance, withinReach,
          speedAt, levelAt, nextMilestone, botStroke, botTargetY, leapsEarned, roomCode, pullBrake,
          rng, makeLevel, hardSegs, inPit, daySeed, dayStamp, WALL_W, ROOF_W, OBS_FROM, STUCK_S,
+         thin, PATH_SEND, PATH_EVERY,
          ROUNDS, INK_MAX, INK_REFILL, MIN_SEG, MAX_SEG, READY_MS, LEDGE_END,
          REACH_FWD, REACH_BACK, SPEED_START, SPEED_STEP, SPEED_EVERY, SPEED_MAX,
          LEAP_EVERY, LEAP_V, JUMP_V, FLOAT_S, IDLE_MS, TOP_N, TOP_ROOM,
@@ -637,6 +638,48 @@ console.log('\nchalk runner\n');
         botTargetY([{ k:0, x:26, h:2 }], 26.4) > 2, botTargetY([{ k:0, x:26, h:2 }], 26.4));
   check('the bot ducks under a hanging block',
         botTargetY([{ k:1, x:22, y:3.2 }], 23) < 2.2, botTargetY([{ k:1, x:22, y:3.2 }], 23));
+}
+
+
+/* ---------- the replay ---------------------------------------------------------
+   A number at the end of a round says nothing about the run, so the path is
+   kept and sent back. It has to be short enough to send and long enough to
+   look like the run.
+   ---------------------------------------------------------------------------- */
+{
+  const long = [];
+  for (let i = 0; i < 900; i++) long.push([i, Math.sin(i / 20)]);
+  const cut = thin(long, 180);
+  check('a long path is thinned to fit', cut.length === 180, cut.length);
+  check('it still starts where the run started', cut[0][0] === long[0][0]);
+  check('and ends where it ended', cut[cut.length-1][0] === long[long.length-1][0]);
+  check('and keeps its order', cut.every((p, i) => i === 0 || p[0] > cut[i-1][0]));
+  check('a short path is left alone', thin(long.slice(0, 10), 180).length === 10);
+  check('a path of one point does not blow up', thin([[1,1]], 180).length === 1);
+
+  const b = newBoard();
+  const host = join(b, 'Ann'); join(b, 'Bob');
+  b.onMessage(host, { t:'start' });
+  b.runAt = Date.now() - 1;
+  for (let i = 0; i < 60; i++){ b.lastTick = Date.now() - 33; b.tick(); }
+  check('the path is being kept', b.path.length > 10, b.path.length);
+  check('but not every single tick', b.path.length < 60, b.path.length);
+
+  b.runner.alive = false;
+  b.lastTick = Date.now() - 33; b.tick();
+  check('the round is over', b.phase === 'result');
+  const slice = b.sliceFor(b.players[0]);
+  check('the run comes down with it', Array.isArray(slice.rp) && slice.rp.length > 5, slice.rp && slice.rp.length);
+  check('and it is small enough to send', JSON.stringify(slice.rp).length < 4000,
+        JSON.stringify(slice.rp).length + ' bytes');
+  check('with what was in the way', Array.isArray(slice.ro));
+  check('and whose run it was', slice.rn === 'Ann', slice.rn);
+  check('nothing of the sort while a round is running',
+        (function(){
+          const c = newBoard(); const h = join(c, 'X'); join(c, 'Y');
+          c.onMessage(h, { t:'start' });
+          return c.sliceFor(c.players[0]).rp === undefined;
+        })());
 }
 
 /* ---------- the board of the day ------------------------------------------------ */

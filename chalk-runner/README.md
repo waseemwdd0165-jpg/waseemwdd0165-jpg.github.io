@@ -37,14 +37,30 @@ next to be the one falling.
 3. Every **50 metres** the runner speeds up a little. The milestones are marked
    on the board and counted down at the top of the screen.
 4. Every **100 metres** the runner banks a **Leap**: a very high jump that then
-   hangs in the air. It is the only moment the drawer gets to breathe, and it
-   is the runner who decides when to spend it.
-5. The runner falls. The pair score the metres. Roles swap. Four rounds.
+   hangs in the air. The runner also has **Slow**: one second at half pace on a
+   six second cooldown, which is their one say in how hard the drawer's life is.
+5. The runner falls. The board pulls back and replays the whole run, ending
+   where they fell. The pair score the metres. Roles swap. Four rounds.
 
 The furthest runs are kept on a leaderboard that survives everybody closing
 their browsers. The record is drawn on the board as a red line out ahead of
 you, so you can see the thing you are chasing, and the end screen tells you
 exactly how many metres short you were.
+
+## What gets in the way
+
+Without obstacles the best thing a drawer can do is lay one long flat line, and
+the game is only about keeping up. Three things break that, and each asks a
+different question of the pair.
+
+- a **wall** has to be got over, so the drawer has to build a ramp
+- a **hanging block** has to be got under, so the road cannot simply go up
+- a **no chalk band** is a stretch where chalk will not stick at all, so the
+  runner has to jump it and the drawer can only watch
+
+The whole level comes out of one number. **Everybody in the world gets the same
+level on the same day**, and it changes at midnight UTC, so there is a board of
+the day beside the all time one.
 
 ## Practise alone
 
@@ -62,7 +78,7 @@ worker.js          the server: rules, physics, rooms, leaderboard
 client.html        the browser: drawing, rendering, sound, music
 build.py           folds the two into worker-single.js
 worker-single.js   generated, the thing that gets deployed
-test.mjs           124 checks against the built server
+test.mjs           218 checks against the built server
 smoke.mjs          25 checks against the client, in a hand written DOM
 domshim.mjs        that hand written DOM
 ```
@@ -135,11 +151,33 @@ through `navigator.vibrate` as well, because a phone in your hands says more
 with a buzz than with a noise. It is guarded, so desktops and iPhones simply do
 not get it.
 
+### Getting out of a tunnel
+
+A dropped socket in the middle of a round is usually a locked phone, a train
+tunnel, or a tab the browser put to sleep. So the seat is kept rather than
+emptied: the whole round freezes, including the runner and the countdown, and
+everybody else is told who is being waited for and for how long. The browser
+remembers its seat key and walks back in by itself, including after a reload.
+After twenty five seconds the seat is released and the round goes on.
+
+### Is it fair?
+
+`balance.mjs` is not a test. The tests say the rules work; this asks whether
+the rules make a game worth playing. It plays sixty whole rounds with nobody
+watching, with the practice bot laying ground and a scripted runner jumping,
+and reports how far they got and what finished them.
+
+A runner who jumps late dies at the no chalk bands around 150 metres. One who
+leaves the ground in time gets to about 950, where the bot simply cannot lay
+chalk faster than the runner crosses it. Real people land between the two,
+which is the range the numbers were tuned for. Run it after touching the speed
+steps, the chalk budget, the jump, or the level generator.
+
 ### Tests
 
 Two suites, both against the files that actually ship.
 
-`node test.mjs` runs **124 checks against the built server**, `worker-single.js`,
+`node test.mjs` runs **218 checks against the built server**, `worker-single.js`,
 not against the source: the geometry, the runner falling and landing and running
 up slopes, a drawer trying to cheat by drawing far ahead or teleporting the pen
 or drawing with no chalk left, the speed steps landing exactly on the
@@ -147,7 +185,7 @@ milestones, the leap being banked and spent, the practice bot staying within
 reach, the leaderboard sorting and capping and surviving a reload, and the idle
 board shutting itself down.
 
-`node smoke.mjs` runs **25 checks against the browser half**. There is no real
+`node smoke.mjs` runs **36 checks against the browser half**. There is no real
 browser here, so `domshim.mjs` is a small hand written DOM and the client is
 driven with the exact messages the server sends. It cannot tell you whether the
 game looks good. It can tell you whether the screen says the right numbers,
@@ -159,8 +197,9 @@ throws.
 
 ```
 python3 build.py        # writes worker-single.js, checks it is plain ASCII
-node test.mjs           # 124 server checks
-node smoke.mjs          # 25 client checks
+node test.mjs           # 218 server checks
+node smoke.mjs          # 36 client checks
+node balance.mjs        # sixty rounds, to see if it is still fair
 ```
 
 Then upload `worker-single.js` as a Cloudflare Worker with a Durable Object
@@ -174,8 +213,8 @@ included, and the limit is on requests and object time rather than a bill.
 
 Being straight about the edges:
 
-- **No reconnect.** Close the tab mid round and you are out of that board. The
-  round ends for your partner and says the runner left.
+- **Reconnect holds a seat for twenty five seconds.** Longer than that, or a
+  reload after half a minute, and the seat is gone.
 - **Nobody has playtested it at length.** Two people have run it end to end.
   The chalk budget, the 50 metre steps and the leap timing are reasoned guesses
   that survived contact with a real round, not numbers tuned over a hundred

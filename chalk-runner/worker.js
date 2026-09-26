@@ -104,6 +104,25 @@ export const SEND_FWD    = 60;
 export const IDLE_MS     = 20 * 60 * 1000;
 
 export const TOP_N       = 10;      /* how many scores the board keeps */
+
+/* ---------- the replay -----------------------------------------------------
+   The runner's own path, kept every third tick, so the round can end by
+   showing the pair what they actually did rather than a number. Sent down
+   thinned to a couple of hundred points, which is plenty at the size the
+   whole run gets drawn.
+   ------------------------------------------------------------------------ */
+export const PATH_EVERY  = 3;
+export const PATH_MAX    = 3600;
+export const PATH_SEND   = 180;
+
+export function thin(path, most){
+  const n = path.length;
+  if (n <= most) return path;
+  const out = [];
+  const step = (n - 1) / (most - 1);
+  for (let i = 0; i < most; i++) out.push(path[Math.round(i * step)]);
+  return out;
+}
 /* Naming the board rather than hard coding '__top__' means a bad set of scores
    can be left behind by pointing at a fresh object, which is what happened
    after the first live test filled it with two of mine. */
@@ -399,6 +418,8 @@ export class Board {
     this.seed = 0;
     this.obs = [];
     this.hard = [];
+    this.path = [];
+    this.pathTick = 0;
   }
 
   /* ---------- the stored leaderboard --------------------------------------- */
@@ -472,6 +493,8 @@ export class Board {
     if (request.headers.get('Upgrade') !== 'websocket'){
       return new Response('expected websocket', { status: 426 });
     }
+    /* the object never knew its own name, and the share card wants it */
+    this.code = (url.searchParams.get('room') || '').toUpperCase();
     const pair = new WebSocketPair();
     const [client, server] = Object.values(pair);
     server.accept();
@@ -655,6 +678,8 @@ export class Board {
     this.seed = (daySeed() ^ ((this.round + 1) * 0x9E3779B1)) >>> 0;
     this.obs = makeLevel(this.seed);
     this.hard = hardSegs(this.obs);
+    this.path = [];
+    this.pathTick = 0;
     this.botFrom = LEDGE_END;
     this.botInk = INK_MAX;
     this.phase = 'play';
@@ -706,7 +731,12 @@ export class Board {
       this.botDraw();
     }
 
-    if (now >= this.runAt) stepRunner(this.runner, this.segs, dt, undefined, this.hard);
+    if (now >= this.runAt){
+      stepRunner(this.runner, this.segs, dt, undefined, this.hard);
+      if (++this.pathTick % PATH_EVERY === 0 && this.path.length < PATH_MAX){
+        this.path.push([r2(this.runner.x), r2(this.runner.y)]);
+      }
+    }
 
     const earned = leapsEarned(this.runner.dist);
     if (earned > this.runner.banked){
@@ -807,9 +837,20 @@ export class Board {
         .map(s => [s.x1, s.y1, s.x2, s.y2]);
       /* the obstacles in view. Both players see the same ones, and the drawer
          needs to see them sooner than the runner does. */
+      const pack = o => o.k === 0 ? [0, o.x, o.h] : o.k === 1 ? [1, o.x, o.y] : [2, o.x, o.w];
       msg.o = this.obs
         .filter(o => o.x > this.runner.x - 20 && o.x < this.runner.x + SEND_FWD)
-        .map(o => o.k === 0 ? [0, o.x, o.h] : o.k === 1 ? [1, o.x, o.y] : [2, o.x, o.w]);
+        .map(pack);
+
+      /* when the round is over, the whole run comes down so it can be played
+         back and turned into a picture worth sending somebody */
+      if (this.phase === 'result'){
+        msg.rp = thin(this.path, PATH_SEND);
+        msg.ro = this.obs.filter(o => o.x < this.runner.x + 6).map(pack);
+        const who = this.players.find(o => o.id === this.runnerId);
+        msg.rn = who ? who.name : '';
+        msg.rc = this.code || '';
+      }
     }
     return msg;
   }

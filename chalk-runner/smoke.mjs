@@ -83,11 +83,20 @@ ok('the milestone countdown reads right', E('tracklbl').textContent === '45 m to
 ok('the pad is on for a runner', E('pad').style.display === 'flex');
 ok('the music started', ctx.music.playing());
 
+const runPath = [];
+for (let i = 0; i <= 120; i++) runPath.push([2 + i * 1.3, 1.6 + Math.sin(i / 9) * 1.4]);
 S(base({ role:'runner', ph:'result', result:'155 metres',
+  rp: runPath, ro: [[0, 40, 2], [2, 90, 3.4], [1, 130, 3.2]], rn:'Ann', rc:'PFNK',
   r:{ x:160, y:-7, g:0, a:0, d:155, lp:1, fl:0, bk:0, bc:0, lv:4, ms:200, sp:5.86 } }), btn, true, '');
 await new Promise(r=>setTimeout(r,80));
-ok('the result banner shows the metres', /155/.test(E('banner-big').textContent), E('banner-big').textContent);
+ok('the banner gets out of the way of the replay', E('banner').style.display === 'none',
+   E('banner').style.display + ' / ' + E('banner-big').textContent);
 ok('the music stopped when they fell', !ctx.music.playing());
+ok('the run was captured for the replay', !!ctx.replay && ctx.replay.dist === 155, ctx.replay && ctx.replay.dist);
+ok('and kept as the best of the match', !!ctx.bestRun && ctx.bestRun.who === 'Ann');
+ok('the picture can be built without throwing', (function(){
+  try { ctx.makeCard(ctx.bestRun); return true; } catch(e){ return 'threw: ' + e.message; }
+})() === true);
 
 S({ t:'state', ph:'over', host:true, role:'runner', solo:false, ink:34, inkMax:34, result:'',
   round:4, rounds:4,
@@ -97,6 +106,7 @@ const rec = E('over-record').innerHTML;
 ok('the end screen names the gap to the record', /157 m/.test(rec) && /312 m/.test(rec), rec);
 ok('the end list shows the best run', /best run 155/.test(E('over-list').innerHTML), E('over-list').innerHTML);
 ok('the stored board is on the end screen', /Cat/.test(E('top-list-2').innerHTML), E('top-list-2').innerHTML);
+ok('and the picture is offered', !E('btn-card').classList.contains('hidden'));
 
 ctx.recordBefore = 100; ctx.recordSeen = true;
 ctx.view = { roster:[{i:'p1',n:'Ann',s:290,b:155,r:'runner'}], host:true };
