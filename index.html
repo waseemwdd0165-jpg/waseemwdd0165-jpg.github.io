@@ -329,6 +329,7 @@ footer{
       <a href="#experience">Experience</a>
       <a href="#skills">Skills</a>
       <a href="#projects">Projects</a>
+      <a href="#writing">Writing</a>
       <a href="#credentials">Credentials</a>
       <a href="#contact">Contact</a>
     </nav>
@@ -511,8 +512,32 @@ footer{
       </div>
     </section>
 
+    <section id="writing">
+      <div class="section-head"><span class="eyebrow">04</span><h2>Writing</h2></div>
+      <div class="grid">
+        <a class="card" href="writing/qr-code-that-round-tripped.html">
+          <div class="idx">Testing</div>
+          <h3>The QR code that round-tripped and still could not be scanned</h3>
+          <p>I wrote a QR encoder from scratch and a decoder to test it, and the two agreed perfectly. Both were wrong: the generator polynomial was built backwards, so the parity was correct for a code nobody uses. On what it takes to test against the world rather than against yourself.</p>
+          <div class="foot">Reed&ndash;Solomon &middot; GF(256) &middot; verification</div>
+        </a>
+        <a class="card" href="writing/two-tabs-one-seat.html">
+          <div class="idx">Browser state</div>
+          <h3>Two tabs, one seat</h3>
+          <p>Reconnect worked on every device I tried. Then I opened a second tab on one laptop and the two players turned out to be one, because localStorage is scoped to the origin and not to the tab. A bug no test I had written could have found, and why the test double was to blame.</p>
+          <div class="foot">WebSockets &middot; browser storage &middot; test doubles</div>
+        </a>
+        <a class="card" href="writing/every-room-had-its-own-global-board.html">
+          <div class="idx">Distributed state</div>
+          <h3>Every room had its own global leaderboard</h3>
+          <p>The board of the day looked right in every room and was wrong everywhere, because each room wrote the record into its own Durable Object. With one room, local and global are the same object and no assertion can tell them apart.</p>
+          <div class="foot">Cloudflare Durable Objects &middot; shared state</div>
+        </a>
+      </div>
+    </section>
+
     <section id="credentials">
-      <div class="section-head"><span class="eyebrow">04</span><h2>Credentials</h2></div>
+      <div class="section-head"><span class="eyebrow">05</span><h2>Credentials</h2></div>
       <div class="cred">
         <div>
           <h3>Bachelor of Engineering — Computer Engineering</h3>
@@ -532,7 +557,7 @@ footer{
     </section>
 
     <section id="contact">
-      <div class="section-head"><span class="eyebrow">05</span><h2>Contact</h2></div>
+      <div class="section-head"><span class="eyebrow">06</span><h2>Contact</h2></div>
       <div class="contact-wrap">
         <div class="contact-col">
           <span class="status"><span class="dot"></span>Available for new opportunities</span>
