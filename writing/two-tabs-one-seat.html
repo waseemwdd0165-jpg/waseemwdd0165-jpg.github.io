@@ -1,0 +1,125 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Two tabs, one seat</title>
+<meta name="description" content="Reconnect worked. Then I opened a second tab on the same laptop and the two players turned out to be one. A bug no test I had written could have found.">
+<link rel="canonical" href="https://waseemwdd0165-jpg.github.io/writing/two-tabs-one-seat.html">
+<meta property="og:type" content="article">
+<meta property="og:title" content="Two tabs, one seat">
+<meta property="og:description" content="Reconnect worked. Then I opened a second tab on the same laptop and the two players turned out to be one.">
+<meta property="og:url" content="https://waseemwdd0165-jpg.github.io/writing/two-tabs-one-seat.html">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,800&family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
+<link rel="stylesheet" href="article.css">
+</head>
+<body>
+<div class="wrap">
+
+<a class="back" href="../index.html#writing">&larr; Waseem Ansari</a>
+
+<p class="kicker">Chalk Runner &middot; browser state</p>
+<h1>Two tabs, one seat</h1>
+<p class="standfirst">Reconnect worked. Then I opened a second tab on the same
+laptop and the two players turned out to be one.</p>
+<div class="meta">Waseem Ahmad Ansari</div>
+
+<p>Chalk Runner is a two-seat game. One person draws the ground, the other runs
+on it, and if either of them drops out the round stops dead. On a phone that
+happens constantly: the network flickers, the screen locks, somebody takes a
+call. So the server holds a dropped player's seat open for twenty-five seconds.
+Each player gets a secret key when they join, the browser remembers it, and on
+reconnect the client offers the key back:</p>
+
+<pre><code>if (m.key) {
+  const back = this.players.find(x =&gt; x.key === m.key);
+  if (back) {
+    if (back.ws &amp;&amp; back.ws !== ws) back.ws.close(1000, 'replaced');
+    back.ws = ws; back.gone = 0;
+    send(ws, { t:'you', id: back.id, name: back.name, key: back.key, back: true });
+    return;
+  }
+}</code></pre>
+
+<p>Refresh the page mid-round and you are back where you were, still the drawer,
+still with your chalk. I tested it by refreshing, by pulling the network cable,
+by locking a phone and unlocking it. It worked every time.</p>
+
+<h2>Then I tried to play against myself</h2>
+
+<p>The obvious way to try a two-player game on your own is two tabs. Tab one
+joins and becomes the drawer. Tab two opens the same link, and instead of
+joining as the second player it takes tab one's seat. Tab one's socket closes
+with <code>'replaced'</code>, its canvas freezes, and the room now contains one
+player who thinks they are two.</p>
+
+<p>I had stored the seat key in <code>localStorage</code>.</p>
+
+<p><code>localStorage</code> is scoped to an origin, not to a tab. Every tab on
+the same site reads and writes the same box. So tab two started up, found a key
+sitting there, and did exactly what I had told it to do: offered the key,
+claimed the seat, evicted the previous socket. The reconnect logic was not
+broken. It was working perfectly on a false premise &mdash; that a key in
+storage belongs to <em>this</em> client.</p>
+
+<h2>Why none of my tests caught it</h2>
+
+<p>This is the part worth sitting with. I had a headless test harness that ran
+two clients through a whole round, and it never came close to this.</p>
+
+<p>The harness modelled each client as its own object with its own fake
+storage. Two clients, two storages, two keys. That is a faithful model of two
+people on two laptops, and it is precisely wrong about two tabs on one laptop,
+which is how nearly everyone tries a browser game for the first time.</p>
+
+<p>The test double was <strong>more isolated than reality</strong>. Every other
+kind of test double I had written that day erred the other way &mdash; sharing
+something the real thing would not share &mdash; and I had been watching for
+that. I was not watching for a stub that granted my code an isolation the
+browser does not actually provide.</p>
+
+<h2>The fix, and why it is better than a workaround</h2>
+
+<p>One word: <code>sessionStorage</code>.</p>
+
+<p>It is scoped to the tab. It survives a refresh, which is the case reconnect
+exists for. It does not survive closing the tab, which is correct &mdash; a
+closed tab is not coming back, and holding its seat for twenty-five seconds
+would only make the next player wait.</p>
+
+<p>The alternative I nearly reached for was to keep <code>localStorage</code>
+and key it by something per-tab, generating an id on load and namespacing the
+entry. That works, and it is a workaround: it reimplements tab scoping on top of
+a store that deliberately does not have it, and the next person to touch the
+file has to work out why. <code>sessionStorage</code> is not a trick. It is the
+store whose lifetime already matches what the data means.</p>
+
+<h2>What I take from it</h2>
+
+<p><strong>Check the lifetime, not just the API.</strong> Browser storage is
+usually chosen for how long it lasts. It is also worth asking who else can see
+it, because "the same browser" and "this tab" are different answers and only one
+of them is what a seat key means.</p>
+
+<p><strong>Play it on one machine.</strong> Multiplayer bugs hide in the
+configurations nobody designs for. Two tabs, two windows, one phone hotspotting
+the other, the same person joining twice by accident. None of those are in the
+spec and all of them happen in the first five minutes a real person has with the
+thing.</p>
+
+<p><strong>Ask what your fakes are quietly promising.</strong> A test double
+does not only stand in for behaviour, it stands in for scope. Mine promised
+isolation that the real runtime never offered, and every test I wrote on top of
+it inherited the promise.</p>
+
+<div class="foot">
+  <a href="https://chalk-runner.waseemwdd0165.workers.dev/">Chalk Runner</a> &middot;
+  <a href="https://github.com/waseemwdd0165-jpg">GitHub</a> &middot;
+  <a href="../index.html">Portfolio</a>
+</div>
+
+</div>
+</body>
+</html>

@@ -1,0 +1,139 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Every room had its own global leaderboard</title>
+<meta name="description" content="The board of the day looked right in every room and was wrong everywhere. What happens when 'global' state lives on an object that is not global.">
+<link rel="canonical" href="https://waseemwdd0165-jpg.github.io/writing/every-room-had-its-own-global-board.html">
+<meta property="og:type" content="article">
+<meta property="og:title" content="Every room had its own global leaderboard">
+<meta property="og:description" content="The board of the day looked right in every room and was wrong everywhere.">
+<meta property="og:url" content="https://waseemwdd0165-jpg.github.io/writing/every-room-had-its-own-global-board.html">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,800&family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
+<link rel="stylesheet" href="article.css">
+</head>
+<body>
+<div class="wrap">
+
+<a class="back" href="../index.html#writing">&larr; Waseem Ansari</a>
+
+<p class="kicker">Chalk Runner &middot; distributed state</p>
+<h1>Every room had its own global leaderboard</h1>
+<p class="standfirst">The board of the day looked right in every room, and was
+wrong everywhere.</p>
+<div class="meta">Waseem Ahmad Ansari</div>
+
+<p>Chalk Runner has a board of the day: the furthest anyone has run since
+midnight, drawn on the blackboard as a red line you are trying to get past. It
+is the whole reason to play a second round. Without it a run is a number you
+forget.</p>
+
+<p>The game lives on Cloudflare Workers with Durable Objects. A Durable Object
+is a small piece of server with storage attached, and the platform guarantees
+there is exactly one instance for a given name, wherever in the world requests
+come from. Chalk Runner names one per room, so a room is a Durable Object: it
+owns the players, the level, the physics loop, and its own storage.</p>
+
+<p>When a round ended, the room did this:</p>
+
+<pre><code>// in the room
+await this.recordScore(name, metres);</code></pre>
+
+<p>Which reads perfectly and is completely wrong.</p>
+
+<h2>What was actually happening</h2>
+
+<p><code>this</code> is the room. <code>this.recordScore</code> wrote the
+record into the room's own storage. Every room had a leaderboard, and every one
+of those leaderboards contained only the runs that had happened in that room.</p>
+
+<p>Inside a single room this is invisible. You run 340 metres, the board says
+340. Your friend runs 380, the board says 380. Play a third round, the line
+moves. Everything you can see is consistent, which is why it survived weeks of
+me testing it, because I was always testing one room.</p>
+
+<p>What was missing was everybody else. The record was supposed to be the
+furthest run <em>anyone</em> had made that day. What each player was actually
+looking at was their own room's high score with the word "record" on it. The
+feature that exists to connect players who will never meet had quietly become a
+feature about yourself.</p>
+
+<h2>Why tests did not find it</h2>
+
+<p>Every test I had written created a room, put two clients in it, played a
+round, and asserted on the result. With one room, "the board" and "this room's
+board" are the same object and no assertion can tell them apart.</p>
+
+<p>The test that finds this is two rooms. Play a round in room A, play a shorter
+round in room B, and assert that room B is told about A's record. I did not have
+that test because I had never written a bug that needed it &mdash; which is a
+circular reason, and the reason most gaps in a suite exist.</p>
+
+<h2>The fix</h2>
+
+<p>One Durable Object with a fixed name, <code>__board_v1__</code>, that owns
+the board. Rooms no longer keep scores, they forward them:</p>
+
+<pre><code>// in the room: hand the score to the one object that owns the board
+async postScore(name, metres) {
+  const id = this.env.ROOM.idFromName(TOP_ROOM);
+  await this.env.ROOM.get(id).fetch('https://do/score', {
+    method: 'POST',
+    body: JSON.stringify({ name, metres })
+  });
+}</code></pre>
+
+<p>Two details are worth pulling out.</p>
+
+<p>The name is versioned. <code>__board_v1__</code> rather than
+<code>board</code>, because a Durable Object's storage is tied to its name and
+the day I need a different shape of record I want a clean object rather than a
+migration on a live one.</p>
+
+<p>The internet can read the board but cannot write to it.
+<code>/api/top</code> is GET only from outside; the write path is reachable only
+from another Durable Object in the same Worker. A leaderboard with a public
+write endpoint stops being a leaderboard within about a day of anyone noticing
+it.</p>
+
+<h2>The default that lied</h2>
+
+<p>There was a small coda. With a real shared board, the very first run of a
+brand new day compared its distance against an empty record, which was
+initialised to zero, and the end screen announced that the player was
+<em>level with the record</em>. Technically true. Read as sarcasm by the only
+person who will ever see it.</p>
+
+<p>The fix was to stop using zero to mean two different things. A separate
+<code>recordSeen</code> flag distinguishes "the record is zero" from "there is
+no record yet", and an empty board now says <strong>First name on the
+board</strong>, which is a nicer thing to be told anyway.</p>
+
+<h2>What I take from it</h2>
+
+<p><strong>"Global" is a claim about where state lives, and nothing enforces
+it.</strong> In a system where every instance can hold storage, writing to the
+wrong instance compiles, deploys, and reads back exactly what you wrote. The
+bug is not in the write. It is in which object you were holding.</p>
+
+<p><strong>Test the plural.</strong> One room, one user, one tenant, one region:
+in every one of those the local and the global collapse into each other. If a
+value is meant to be shared, the test has to contain two of the things it is
+shared between, or it is not testing sharing at all.</p>
+
+<p><strong>Watch for defaults doing double duty.</strong> Zero meaning "no
+record" and zero meaning "a record of zero" were fine until the two of them were
+in the same sentence in front of a player.</p>
+
+<div class="foot">
+  <a href="https://chalk-runner.waseemwdd0165.workers.dev/">Chalk Runner</a> &middot;
+  <a href="https://github.com/waseemwdd0165-jpg">GitHub</a> &middot;
+  <a href="../index.html">Portfolio</a>
+</div>
+
+</div>
+</body>
+</html>

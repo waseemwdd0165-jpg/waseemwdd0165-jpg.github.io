@@ -1,0 +1,128 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>The QR code that round-tripped and still could not be scanned</title>
+<meta name="description" content="My encoder and my decoder agreed with each other perfectly. Both were wrong. What it takes to test something against the world rather than against yourself.">
+<link rel="canonical" href="https://waseemwdd0165-jpg.github.io/writing/qr-code-that-round-tripped.html">
+<meta property="og:type" content="article">
+<meta property="og:title" content="The QR code that round-tripped and still could not be scanned">
+<meta property="og:description" content="My encoder and my decoder agreed with each other perfectly. Both were wrong.">
+<meta property="og:url" content="https://waseemwdd0165-jpg.github.io/writing/qr-code-that-round-tripped.html">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,800&family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
+<link rel="stylesheet" href="article.css">
+</head>
+<body>
+<div class="wrap">
+
+<a class="back" href="../index.html#writing">&larr; Waseem Ansari</a>
+
+<p class="kicker">Chalk Runner &middot; testing</p>
+<h1>The QR code that round-tripped and still could not be scanned</h1>
+<p class="standfirst">My encoder and my decoder agreed with each other perfectly.
+Both of them were wrong.</p>
+<div class="meta">Waseem Ahmad Ansari</div>
+
+<p>Chalk Runner ends with a share card: a picture of your run with the distance
+on it and a QR code in the corner so somebody standing next to you can point a
+phone at it and be in the next round. The game runs on a Cloudflare Worker with
+no build step and no npm, so pulling in a QR library was not an option. I wrote
+the encoder.</p>
+
+<p>That is more work than it sounds. A QR code is a Reed&ndash;Solomon codeword
+laid out in a square. You need arithmetic in the Galois field GF(256), a
+generator polynomial for the number of error-correction bytes your version
+needs, the data laid out along a snaking path, one of eight mask patterns
+applied and scored by a published penalty function, and fifteen format bits
+protected by their own BCH code. Every stage is unforgiving and none of it is
+visible in the output. A QR code either scans or it is a pattern of squares.</p>
+
+<p>So I wrote a decoder as well, and a test file with twenty-four checks in it.
+Encode a string, decode it, assert you get the string back. Short strings, long
+strings, a URL with a query on it, the exact payload the game actually uses.
+Every one passed. I put a code on the card and moved on.</p>
+
+<h2>The check that had no business passing</h2>
+
+<p>The next morning something bothered me about how easy that had been, so I
+added one more assertion that had nothing to do with my decoder.</p>
+
+<p>A Reed&ndash;Solomon codeword has an algebraic property that does not depend
+on anybody's implementation: evaluate the finished codeword at the successive
+powers of the field's generator element, and every one of those values &mdash;
+the syndromes &mdash; must be zero. That is what makes it a codeword rather than
+an arbitrary string of bytes. It is the property a scanner leans on to repair a
+code with a thumb over the corner of it.</p>
+
+<pre><code>// A valid codeword vanishes at alpha^1 .. alpha^(2t).
+// If any syndrome is non-zero, the parity is not parity for this data.
+for (let i = 0; i &lt; ecBytes; i++) {
+  let s = 0;
+  for (const b of codeword) s = gfMul(s, gfExp(i + 1)) ^ b;
+  assert(s === 0, 'syndrome ' + i + ' is ' + s);
+}</code></pre>
+
+<p>Syndrome zero came back non-zero. So did all the others.</p>
+
+<h2>What was actually wrong</h2>
+
+<p>The generator polynomial was built backwards. It is produced by multiplying
+out <code>(x - a^0)(x - a^1)...</code> and I had accumulated the coefficients
+lowest-degree-first while the division that produces the parity bytes consumed
+them highest-degree-first. The polynomial I generated was the reverse of the
+polynomial I divided by.</p>
+
+<p>Reversing a polynomial's coefficients is not a harmless relabelling. It gives
+you a different polynomial with different roots, so the remainder my code
+computed was the correct parity for a code nobody uses. Every byte of it was
+deterministic, stable and wrong.</p>
+
+<p>And my decoder never noticed, because my decoder did what I had asked it to
+do: find the data region, undo the mask, read the length, read that many bytes
+back out. It never looked at the parity, because reading the data does not
+require the parity. The two functions agreed because they were two halves of the
+same misunderstanding.</p>
+
+<p>The fix was three lines. Build <code>genPoly</code> highest-degree-first so
+that both ends of the operation mean the same thing by position zero. All
+twenty-four round trips still passed, the syndromes went to zero, and the code
+scanned.</p>
+
+<h2>What I take from it</h2>
+
+<p><strong>A round trip through your own code is not a test of correctness.</strong>
+It is a test that two of your functions share an interpretation. That is worth
+knowing &mdash; it catches typos and off-by-ones &mdash; but a shared
+misunderstanding passes it every single time, and a shared misunderstanding is
+exactly what you get when the same person writes both halves in the same
+afternoon.</p>
+
+<p><strong>You need an oracle from outside the pair.</strong> Not another
+implementation you also wrote. Something the specification asserts that you can
+check independently: an invariant, a published test vector, a checksum, a real
+client. The syndrome check qualifies because it is an algebraic fact about
+Reed&ndash;Solomon codes, and it holds whether or not my encoder is any good.
+The best tests in that file now are the ones that would fail even if I had
+written the decoder wrong in the identical way.</p>
+
+<p><strong>The last oracle is the world.</strong> After the syndromes went
+green I printed the card and pointed three different phones at it. That is not
+elegant and it is not automated, and it is the only check that answers the
+question the feature actually asks, which is not "is this a valid codeword" but
+"will the person standing next to you get into the game".</p>
+
+<p>The version on the card today is the one that passes all three: the round
+trips, the syndromes, and a camera.</p>
+
+<div class="foot">
+  <a href="https://chalk-runner.waseemwdd0165.workers.dev/">Chalk Runner</a> &middot;
+  <a href="https://github.com/waseemwdd0165-jpg">GitHub</a> &middot;
+  <a href="../index.html">Portfolio</a>
+</div>
+
+</div>
+</body>
+</html>
