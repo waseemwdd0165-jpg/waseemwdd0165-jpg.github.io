@@ -4,11 +4,11 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>The QR code that round-tripped and still could not be scanned</title>
-<meta name="description" content="My encoder and my decoder agreed with each other perfectly. Both were wrong. What it takes to test something against the world rather than against yourself.">
+<meta name="description" content="A QR encoder written from scratch inside a Cloudflare Worker, down to the Galois field arithmetic. It round-tripped perfectly through my own decoder and no phone could read it. On testing against the world rather than against yourself.">
 <link rel="canonical" href="https://waseemwdd0165-jpg.github.io/writing/qr-code-that-round-tripped.html">
 <meta property="og:type" content="article">
 <meta property="og:title" content="The QR code that round-tripped and still could not be scanned">
-<meta property="og:description" content="My encoder and my decoder agreed with each other perfectly. Both were wrong.">
+<meta property="og:description" content="A QR encoder written from scratch inside a Cloudflare Worker. It round-tripped perfectly through my own decoder, and no phone could read it.">
 <meta property="og:url" content="https://waseemwdd0165-jpg.github.io/writing/qr-code-that-round-tripped.html">
 <meta property="og:image" content="https://waseemwdd0165-jpg.github.io/writing/og-qr.png">
 <meta property="og:image:width" content="1200">
@@ -25,10 +25,11 @@
 
 <a class="back" href="../index.html#writing">&larr; Waseem Ansari</a>
 
-<p class="kicker">Chalk Runner &middot; testing</p>
+<p class="kicker">Chalk Runner &middot; QR from scratch</p>
 <h1>The QR code that round-tripped and still could not be scanned</h1>
-<p class="standfirst">My encoder and my decoder agreed with each other perfectly.
-Both of them were wrong.</p>
+<p class="standfirst">No library, no build step: a QR encoder written from scratch
+inside a Cloudflare Worker, Reed&ndash;Solomon error correction and all. It
+round-tripped perfectly through my own decoder, and no phone could read it.</p>
 <div class="meta">Waseem Ahmad Ansari</div>
 
 <p>Chalk Runner ends with a share card: a picture of your run with the distance
