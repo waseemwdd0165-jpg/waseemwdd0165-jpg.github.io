@@ -1,0 +1,244 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Build a browser-based LLM response evaluator in vanilla JavaScript</title>
+<meta name="description" content="A tutorial: build the tool that collects RLHF preference data. Side-by-side scoring, keyboard shortcuts, gold-standard agreement and JSONL export, in one HTML file.">
+<link rel="canonical" href="https://waseemwdd0165-jpg.github.io/writing/build-an-llm-response-evaluator.html">
+<meta property="og:type" content="article">
+<meta property="og:title" content="Build a browser-based LLM response evaluator in vanilla JavaScript">
+<meta property="og:description" content="A tutorial: build the tool that collects RLHF preference data. Side-by-side scoring, keyboard shortcuts, gold-standard agreement and JSONL export, in one HTML file.">
+<meta property="og:url" content="https://waseemwdd0165-jpg.github.io/writing/build-an-llm-response-evaluator.html">
+<meta property="og:image" content="https://waseemwdd0165-jpg.github.io/writing/og-evaluator.png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:image" content="https://waseemwdd0165-jpg.github.io/writing/og-evaluator.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,800&family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
+<link rel="stylesheet" href="article.css">
+</head>
+<body>
+<div class="wrap">
+
+<a class="back" href="../index.html#writing">&larr; Waseem Ansari</a>
+
+<p class="kicker">Tutorial · vanilla JavaScript</p>
+<h1>Build a browser-based LLM response evaluator in vanilla JavaScript</h1>
+<p class="standfirst">Side-by-side comparison, rubric scoring, agreement against a gold standard, JSONL export. One HTML file, no build step.</p>
+<div class="meta">Waseem Ahmad Ansari</div>
+
+<p>If you are fine-tuning a model with RLHF, somewhere in your pipeline a human looks at two responses and says which is better. That judgement, repeated thousands of times, becomes your preference dataset.</p>
+
+<p>This tutorial builds the tool that collects it. No framework, no build step, no server — one HTML file that runs from a local folder or a static host. By the end you will have side-by-side comparison, rubric scoring, keyboard shortcuts, agreement tracking against a gold standard, and JSONL export.</p>
+
+<p>I have built variations of this several times. The mechanics are simple. The decisions that make it <em>usable</em> are where the work is, so I will flag those as we go.</p>
+
+<h2>The data model</h2>
+
+<p>Start with the shape of the thing, because everything else follows from it.</p>
+
+<p>A task is a prompt plus two candidate responses. A rubric is a fixed list of criteria. A result is a set of per-criterion scores plus one overall verdict.</p>
+
+<pre><code>const RUBRIC = [
+  { id: &quot;helpful&quot;,  name: &quot;Helpfulness&quot;, desc: &quot;Does it answer what was asked?&quot; },
+  { id: &quot;accurate&quot;, name: &quot;Accuracy&quot;,    desc: &quot;Are the claims correct?&quot; },
+  { id: &quot;safe&quot;,     name: &quot;Safety&quot;,      desc: &quot;Any harmful or policy-violating content?&quot; },
+  { id: &quot;clear&quot;,    name: &quot;Clarity&quot;,     desc: &quot;Well structured and appropriately concise?&quot; }
+];
+
+const TASKS = [
+  {
+    id: &quot;t-001&quot;,
+    prompt: &quot;My laptop battery drains in about two hours. What should I check first?&quot;,
+    a: &quot;Start with what the machine can tell you...&quot;,
+    b: &quot;There are many possible reasons for battery drain...&quot;,
+    gold: &quot;A&quot;,
+    goldWhy: &quot;A gives an ordered diagnostic path. B lists possibilities without prioritising them.&quot;
+  }
+];</code></pre>
+
+<p>Two things here are deliberate.</p>
+
+<p>**The rubric criteria carry a <code>desc</code>.** A criterion named "Helpfulness" with no definition produces noise, because every rater reads it differently. The description is not decoration — it is the thing that makes two raters agree.</p>
+
+<p>**Each task carries a <code>gold</code> verdict and a reason.** This is what turns a collection tool into a calibration tool. More on that below.</p>
+
+<h2>State</h2>
+
+<p>Keep it flat. One index for position, one object keyed by task id.</p>
+
+<pre><code>let idx = 0;
+const results = {};   // taskId -&gt; { scores: {critId: {a, b}}, verdict }
+
+function record() {
+  const t = TASKS[idx];
+  if (!results[t.id]) results[t.id] = { scores: {}, verdict: null };
+  return results[t.id];
+}</code></pre>
+
+<p>Scores are nested per side so one criterion holds both responses' ratings: <code>scores.helpful = { a: 4, b: 2 }</code>. That structure exports cleanly and makes the per-criterion comparison trivial to read back.</p>
+
+<h2>Rendering the pair</h2>
+
+<p>Two cards, same markup, different data. The score buttons carry their state in <code>aria-pressed</code>, which gives you styling and accessibility from one attribute.</p>
+
+<pre><code>function respCard(side, text, r) {
+  return `
+    &lt;div class=&quot;card resp&quot;&gt;
+      &lt;div class=&quot;resp-head&quot;&gt;
+        &lt;span class=&quot;tag&quot;&gt;RESPONSE ${side.toUpperCase()}&lt;/span&gt;
+        &lt;span class=&quot;pill&quot;&gt;${text.trim().split(/\s+/).length} words&lt;/span&gt;
+      &lt;/div&gt;
+      &lt;div class=&quot;resp-body&quot;&gt;${esc(text)}&lt;/div&gt;
+      ${RUBRIC.map(c =&gt; {
+        const v = r.scores[c.id] ? r.scores[c.id][side] : null;
+        return `
+          &lt;div class=&quot;crit&quot;&gt;
+            &lt;span class=&quot;name&quot;&gt;${c.name}&lt;/span&gt;
+            &lt;span class=&quot;desc&quot;&gt;${c.desc}&lt;/span&gt;
+            &lt;div class=&quot;scale&quot; data-crit=&quot;${c.id}&quot; data-side=&quot;${side}&quot;&gt;
+              ${[1,2,3,4,5].map(n =&gt;
+                `&lt;button data-score=&quot;${n}&quot; aria-pressed=&quot;${v === n}&quot;&gt;${n}&lt;/button&gt;`
+              ).join(&quot;&quot;)}
+            &lt;/div&gt;
+          &lt;/div&gt;`;
+      }).join(&quot;&quot;)}
+    &lt;/div&gt;`;
+}</code></pre>
+
+<p>Always escape. Model output is untrusted text and will eventually contain something that looks like markup:</p>
+
+<pre><code>function esc(s) {
+  return String(s).replace(/[&amp;&lt;&gt;&quot;&#x27;]/g, c =&gt; ({
+    &quot;&amp;&quot;:&quot;&amp;amp;&quot;, &quot;&lt;&quot;:&quot;&amp;lt;&quot;, &quot;&gt;&quot;:&quot;&amp;gt;&quot;, &#x27;&quot;&#x27;:&quot;&amp;quot;&quot;, &quot;&#x27;&quot;:&quot;&amp;#39;&quot;
+  }[c]));
+}</code></pre>
+
+<p>The word count in the header is not filler. Length bias is real — raters favour longer responses — and showing the number makes the bias visible to the person about to be affected by it.</p>
+
+<h2>Events: delegate, do not attach</h2>
+
+<p>Re-rendering replaces the DOM, so per-button listeners have to be re-attached every time. Delegate to the container instead:</p>
+
+<pre><code>document.querySelectorAll(&quot;.scale&quot;).forEach(sc =&gt; {
+  sc.addEventListener(&quot;click&quot;, e =&gt; {
+    const b = e.target.closest(&quot;button&quot;);
+    if (!b) return;
+    setScore(sc.dataset.crit, sc.dataset.side, +b.dataset.score);
+  });
+});
+
+function setScore(crit, side, n) {
+  const r = record();
+  if (!r.scores[crit]) r.scores[crit] = { a: null, b: null };
+  r.scores[crit][side] = n;
+  document.querySelectorAll(`.scale[data-crit=&quot;${crit}&quot;][data-side=&quot;${side}&quot;] button`)
+    .forEach(b =&gt; b.setAttribute(&quot;aria-pressed&quot;, (+b.dataset.score) === n));
+}</code></pre>
+
+<p>Note that <code>setScore</code> updates the buttons directly rather than triggering a full re-render. Re-rendering on every click resets scroll position, which is infuriating twenty items into a session.</p>
+
+<h2>Keyboard shortcuts</h2>
+
+<p>If a rater is doing two hundred items, reaching for the mouse on every one is the difference between an hour and two hours.</p>
+
+<pre><code>document.addEventListener(&quot;keydown&quot;, e =&gt; {
+  if (/^(INPUT|TEXTAREA)$/.test(e.target.tagName)) return;
+
+  const k = e.key.toLowerCase();
+  if (k === &quot;a&quot;) setVerdict(&quot;A&quot;);
+  else if (k === &quot;b&quot;) setVerdict(&quot;B&quot;);
+  else if (k === &quot;t&quot;) setVerdict(&quot;TIE&quot;);
+  else if (e.key === &quot;ArrowRight&quot;) next();
+  else if (e.key === &quot;ArrowLeft&quot;) prev();
+});</code></pre>
+
+<p>The guard on the first line matters. Without it, typing "a" in a comment box silently changes the verdict on the item being rated.</p>
+
+<h2>The calibration loop</h2>
+
+<p>This is the part that separates a data-collection form from an evaluation tool.</p>
+
+<p>After the rater commits a verdict, reveal the gold label and the reasoning:</p>
+
+<pre><code>function setVerdict(v) {
+  const r = record();
+  r.verdict = v;
+  showFeedback();
+  updateStats();
+}
+
+function showFeedback() {
+  const t = TASKS[idx], r = record();
+  const match = r.verdict === t.gold;
+  el(&quot;feedback&quot;).innerHTML = `
+    &lt;div class=&quot;feedback ${match ? &quot;good&quot; : &quot;warn&quot;}&quot;&gt;
+      &lt;span class=&quot;pill&quot;&gt;${match ? &quot;Matches gold&quot; : &quot;Differs from gold&quot;}&lt;/span&gt;
+      &lt;p&gt;${esc(t.goldWhy)}&lt;/p&gt;
+    &lt;/div&gt;`;
+}</code></pre>
+
+<p>Order matters: the gold label appears <em>after</em> the rater commits, never before. Show it first and you are measuring reading comprehension, not judgement.</p>
+
+<p>Agreement rate then falls out of the same data:</p>
+
+<pre><code>const done = Object.values(results).filter(r =&gt; r.verdict);
+const agree = TASKS.filter(t =&gt; results[t.id]?.verdict === t.gold).length;
+const pct = done.length ? Math.round(agree / done.length * 100) : 0;</code></pre>
+
+<p>In production this figure is what gates a rater onto live work. In a demo it tells the person using it whether they are reading the rubric the way it was written.</p>
+
+<h2>Export</h2>
+
+<p>JSONL — one object per line — because that is what training pipelines consume.</p>
+
+<pre><code>const jsonl = TASKS
+  .filter(t =&gt; results[t.id]?.verdict)
+  .map(t =&gt; {
+    const r = results[t.id];
+    return JSON.stringify({
+      task_id: t.id,
+      prompt: t.prompt,
+      chosen: r.verdict === &quot;TIE&quot; ? null
+            : r.verdict === &quot;A&quot; ? &quot;response_a&quot; : &quot;response_b&quot;,
+      tie: r.verdict === &quot;TIE&quot;,
+      rubric_scores: RUBRIC.reduce((o, c) =&gt; {
+        o[c.id] = r.scores[c.id] || null;
+        return o;
+      }, {}),
+      gold_label: t.gold,
+      agrees_with_gold: r.verdict === t.gold
+    });
+  })
+  .join(&quot;\n&quot;);</code></pre>
+
+<p>Keep ties as an explicit <code>tie: true</code> with <code>chosen: null</code> rather than dropping them. A tie is a real signal — it says the two responses were genuinely equivalent — and pipelines that silently discard them lose that.</p>
+
+<h2>What I would add next</h2>
+
+<p><strong>Position randomisation.</strong> Raters favour the left-hand response. Shuffle which candidate lands in slot A and store the true mapping separately.</p>
+
+<p><strong>Timing.</strong> Record seconds per item. Ratings made in four seconds are usually worth less than ratings made in forty, and the distribution tells you a lot about whether people are actually reading.</p>
+
+<p><strong>Free-text reasons on disagreement.</strong> When a rater differs from gold, one sentence explaining why is the most valuable data in the whole session — it is where you find out your rubric is ambiguous.</p>
+
+<h2>Try it</h2>
+
+<p>A working version is here: <a href="https://waseemwdd0165-jpg.github.io/llm-evaluator.html">LLM Response Evaluator</a>. Six task pairs with recorded responses, full rubric, keyboard shortcuts, and export. Everything runs client-side, so no key and no server.</p>
+
+<hr>
+
+<p><em>I build software and I evaluate it — nine years as a software engineer, seven evaluating search and AI systems. <a href="https://waseemwdd0165-jpg.github.io">waseemwdd0165-jpg.github.io</a></em></p>
+
+<div class="foot">
+  <a href="https://waseemwdd0165-jpg.github.io/">Portfolio</a> &middot;
+  <a href="https://github.com/waseemwdd0165-jpg">GitHub</a> &middot;
+  <a href="https://www.linkedin.com/in/waseem-ahmad-ansari-bba5771ab/">LinkedIn</a>
+</div>
+
+</div>
+</body>
+</html>
