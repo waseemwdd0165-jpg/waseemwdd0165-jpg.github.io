@@ -80,7 +80,7 @@
       <h1>Prompt Testing Workbench</h1>
       <span class="sub">Version prompts, run a fixed test set, compare pass rates</span>
     </div>
-    <a class="backlink" href="index.html">&larr; Portfolio</a>
+    <a class="backlink" href="index.html">&lt;- Portfolio</a>
   </div>
 </header>
 
@@ -287,7 +287,7 @@ function renderCases(){
   el("cases").innerHTML = rs.map((r,i)=>`
     <div class="case" open-state="${open[r.c.id]?1:0}" data-id="${r.c.id}">
       <div class="case-head">
-        <span class="chev">&#9656;</span>
+        <span class="chev">-</span>
         <span class="name">${esc(r.c.name)}<small>${esc(r.c.note)}</small></span>
         <span class="pill ${r.pass?"good":"bad"}">${r.checks.filter(c=>c.ok).length}/${CHECKS.length}</span>
       </div>

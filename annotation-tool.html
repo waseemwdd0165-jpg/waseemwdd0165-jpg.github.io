@@ -75,7 +75,7 @@ pre.out{background:var(--surface-2);border:1px solid var(--line);border-radius:4
       <h1>Text Annotation Tool</h1>
       <span class="sub">Span labelling for NLP training data, with agreement checking</span>
     </div>
-    <a class="backlink" href="index.html">&larr; Portfolio</a>
+    <a class="backlink" href="index.html">&lt;- Portfolio</a>
   </div>
 </header>
 
@@ -94,14 +94,14 @@ pre.out{background:var(--surface-2);border:1px solid var(--line);border-radius:4
       </div>
 
       <div class="doc-nav">
-        <button class="btn" id="btn-prev">&larr; Previous</button>
-        <button class="btn" id="btn-next">Next &rarr;</button>
+        <button class="btn" id="btn-prev">&lt;- Previous</button>
+        <button class="btn" id="btn-next">Next -&gt;</button>
         <button class="btn" id="btn-clear">Clear this document</button>
         <button class="btn primary" id="btn-export">Export JSONL</button>
       </div>
       <div class="hintbar">
         <span>Select text, then press a number key or click a label.</span>
-        <span><span class="kbd">1</span>&ndash;<span class="kbd">5</span> label</span>
+        <span><span class="kbd">1</span>-<span class="kbd">5</span> label</span>
         <span><span class="kbd">Esc</span> deselect</span>
       </div>
 
@@ -132,12 +132,12 @@ pre.out{background:var(--surface-2);border:1px solid var(--line);border-radius:4
         <div class="bar" style="margin-bottom:12px"><span id="progress-bar" style="width:0%"></span></div>
         <div class="stat-line"><span class="k">Documents touched</span><span class="v" id="s-docs">0 / 0</span></div>
         <div class="stat-line"><span class="k">Total spans</span><span class="v" id="s-spans">0</span></div>
-        <div class="stat-line"><span class="k">Agreement with gold</span><span class="v" id="s-agree">&mdash;</span></div>
+        <div class="stat-line"><span class="k">Agreement with gold</span><span class="v" id="s-agree">-</span></div>
       </div>
 
       <div class="card pad">
         <div class="eyebrow" style="margin-bottom:8px">About this tool</div>
-        <p class="note" style="margin:0">The span-labelling loop behind NER and intent training sets: a fixed schema, keyboard-first marking, and an agreement score against a gold standard &mdash; the measure that decides whether an annotator's work is usable.</p>
+        <p class="note" style="margin:0">The span-labelling loop behind NER and intent training sets: a fixed schema, keyboard-first marking, and an agreement score against a gold standard - the measure that decides whether an annotator's work is usable.</p>
       </div>
     </aside>
   </div>
@@ -262,7 +262,7 @@ function renderList(){
     <div class="ann">
       <span class="swatch" style="background:${colorOf(s.label)}"></span>
       <span class="txt">${esc(s.text)}</span>
-      <button class="del" data-start="${s.start}" aria-label="Remove annotation">&times;</button>
+      <button class="del" data-start="${s.start}" aria-label="Remove annotation">x</button>
     </div>`).join("") : `<div class="empty" style="padding:22px 14px">No spans marked yet.</div>`;
   el("ann-list").querySelectorAll(".del").forEach(b=>
     b.addEventListener("click", ()=>remove(+b.dataset.start)));

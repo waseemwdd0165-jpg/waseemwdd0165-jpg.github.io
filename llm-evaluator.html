@@ -84,7 +84,7 @@ pre.out{background:var(--surface-2);border:1px solid var(--line);border-radius:4
       <h1>LLM Response Evaluator</h1>
       <span class="sub">Rubric scoring and preference-data collection for model output</span>
     </div>
-    <a class="backlink" href="index.html">&larr; Portfolio</a>
+    <a class="backlink" href="index.html">&lt;- Portfolio</a>
   </div>
 </header>
 
@@ -102,21 +102,21 @@ pre.out{background:var(--surface-2);border:1px solid var(--line);border-radius:4
         <div class="stat-line"><span class="k">Prefers A</span><span class="v" id="s-a">0</span></div>
         <div class="stat-line"><span class="k">Prefers B</span><span class="v" id="s-b">0</span></div>
         <div class="stat-line"><span class="k">Ties</span><span class="v" id="s-tie">0</span></div>
-        <div class="stat-line"><span class="k">Agreement w/ gold</span><span class="v" id="s-agree">&mdash;</span></div>
+        <div class="stat-line"><span class="k">Agreement w/ gold</span><span class="v" id="s-agree">-</span></div>
       </div>
 
       <div class="card pad">
         <div class="eyebrow" style="margin-bottom:10px">Shortcuts</div>
         <div class="shortcuts">
-          <span><span class="kbd">1</span>&ndash;<span class="kbd">5</span> score</span>
+          <span><span class="kbd">1</span>-<span class="kbd">5</span> score</span>
           <span><span class="kbd">A</span> / <span class="kbd">B</span> / <span class="kbd">T</span> verdict</span>
-          <span><span class="kbd">&rarr;</span> next</span>
+          <span><span class="kbd">-&gt;</span> next</span>
         </div>
       </div>
 
       <div class="card pad">
         <div class="eyebrow" style="margin-bottom:8px">About this tool</div>
-        <p class="note" style="margin:0">A working demo of the preference-rating loop used to build RLHF training data: two model responses, a fixed rubric, a forced choice, and a structured export. Sample tasks are built in &mdash; no API key needed.</p>
+        <p class="note" style="margin:0">A working demo of the preference-rating loop used to build RLHF training data: two model responses, a fixed rubric, a forced choice, and a structured export. Sample tasks are built in - no API key needed.</p>
       </div>
     </aside>
   </div>
@@ -223,9 +223,9 @@ function render(){
       </div>
       <div id="feedback"></div>
       <div class="actions-bar">
-        <button class="btn" id="btn-prev" ${idx===0?"disabled":""}>&larr; Previous</button>
+        <button class="btn" id="btn-prev" ${idx===0?"disabled":""}>&lt;- Previous</button>
         <button class="btn primary" id="btn-next" ${r.verdict?"":"disabled"}>
-          ${idx===TASKS.length-1?"Finish &amp; export":"Next task &rarr;"}
+          ${idx===TASKS.length-1?"Finish &amp; export":"Next task -&gt;"}
         </button>
         <span class="note" id="hint">${r.verdict?"":"Pick a preference to continue."}</span>
       </div>
