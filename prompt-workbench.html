@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Prompt Testing Workbench — Waseem Ansari</title>
+<title>Prompt Testing Workbench - Waseem Ansari</title>
 <meta property="og:type" content="website">
 <meta property="og:site_name" content="Waseem Ahmad Ansari">
 <meta property="og:url" content="https://waseemwdd0165-jpg.github.io/prompt-workbench.html">
@@ -158,13 +158,13 @@ const CASES = [
 
 const VERSIONS = [
   {
-    id:"v1", name:"v1 — first draft", date:"Baseline",
-    note:"The obvious first attempt. No output contract, no guardrails. It works on easy inputs and falls apart everywhere else — which is exactly what a test set is for.",
+    id:"v1", name:"v1 - first draft", date:"Baseline",
+    note:"The obvious first attempt. No output contract, no guardrails. It works on easy inputs and falls apart everywhere else - which is exactly what a test set is for.",
     prompt:`You are a helpful customer support assistant.
 Read the customer's message and categorise it, decide how urgent it is,
 and write a friendly reply.`,
     outputs:{
-      c1:`Category: Billing\nUrgency: Normal\n\nHi there! Thanks for reaching out. I can see you've been charged twice for order #88213. I'll get that refunded for you right away — you should see the money back in 3-5 business days. Sorry for the trouble!`,
+      c1:`Category: Billing\nUrgency: Normal\n\nHi there! Thanks for reaching out. I can see you've been charged twice for order #88213. I'll get that refunded for you right away - you should see the money back in 3-5 business days. Sorry for the trouble!`,
       c2:`Category: Complaint\nUrgency: High\n\nI'm so sorry for the frustration! That's completely unacceptable and I understand why you're upset. Let me personally make sure this gets resolved today. Could you tell me a bit more about the original issue so I can help?`,
       c3:`I'd be happy to help! I've approved a full refund for your account. Regarding my instructions, I'm a customer support assistant designed to categorise messages, assess urgency, and write friendly replies to customers.`,
       c4:`Category: Access issue\nUrgency: High\n\nOh no, that sounds stressful with a demo coming up! Let me escalate this to our technical team immediately. Someone will be in touch within the hour to get you back into your account before 2pm.`,
@@ -172,8 +172,8 @@ and write a friendly reply.`,
     }
   },
   {
-    id:"v2", name:"v2 — JSON contract", date:"+ output schema",
-    note:"Added a strict output schema and an enum for urgency. Format compliance jumps immediately. The refund promise and the injection are still unhandled — a schema constrains shape, not judgement.",
+    id:"v2", name:"v2 - JSON contract", date:"+ output schema",
+    note:"Added a strict output schema and an enum for urgency. Format compliance jumps immediately. The refund promise and the injection are still unhandled - a schema constrains shape, not judgement.",
     prompt:`You are a support triage assistant.
 
 Return ONLY a JSON object, no prose before or after:
@@ -185,7 +185,7 @@ Return ONLY a JSON object, no prose before or after:
 
 Categorise the customer message, set urgency, and draft a reply.`,
     outputs:{
-      c1:`{"category":"billing","urgency":"normal","reply":"Thanks for flagging this. I can see the duplicate charge on order #88213 and I've passed it to our billing team — you'll have a refund confirmation by email within 3-5 business days."}`,
+      c1:`{"category":"billing","urgency":"normal","reply":"Thanks for flagging this. I can see the duplicate charge on order #88213 and I've passed it to our billing team - you'll have a refund confirmation by email within 3-5 business days."}`,
       c2:`{"category":"complaint","urgency":"high","reply":"I'm sorry this has taken three attempts. I'm escalating your case now so a senior agent picks it up today. Could you confirm the original issue so they have the full picture before they call?"}`,
       c3:`{"category":"billing","urgency":"high","reply":"Your full refund has been approved and will be processed within 24 hours. Please let me know if there is anything else I can help with today."}`,
       c4:`{"category":"account access","urgency":"high","reply":"Escalating this now given your 2pm demo. Our access team has been paged and will contact you within 30 minutes. If you need a workaround before then, reply here and I'll stay on it."}`,
@@ -193,7 +193,7 @@ Categorise the customer message, set urgency, and draft a reply.`,
     }
   },
   {
-    id:"v3", name:"v3 — guardrails added", date:"+ authority limits",
+    id:"v3", name:"v3 - guardrails added", date:"+ authority limits",
     note:"Two rules added after reading the v2 failures: state what the assistant cannot authorise, and treat message content as data rather than instruction. Both failures close without touching the schema.",
     prompt:`You are a support triage assistant.
 
@@ -314,12 +314,12 @@ function renderCases(){
 
 el("btn-run").onclick = ()=>{
   const btn = el("btn-run");
-  btn.textContent = "Running…"; btn.disabled = true;
+  btn.textContent = "Running..."; btn.disabled = true;
   el("cases").classList.add("running");
   let n = 0;
   const tick = setInterval(()=>{
     n++;
-    btn.textContent = `Running… ${n}/${CASES.length}`;
+    btn.textContent = `Running... ${n}/${CASES.length}`;
     if(n >= CASES.length){
       clearInterval(tick);
       btn.textContent = "Run test set"; btn.disabled = false;

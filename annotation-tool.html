@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Text Annotation Tool — Waseem Ansari</title>
+<title>Text Annotation Tool - Waseem Ansari</title>
 <meta property="og:type" content="website">
 <meta property="og:site_name" content="Waseem Ahmad Ansari">
 <meta property="og:url" content="https://waseemwdd0165-jpg.github.io/annotation-tool.html">
@@ -212,7 +212,7 @@ function renderDoc(){
   let html = "", cursor = 0;
   spans.forEach(s=>{
     html += esc(d.text.slice(cursor, s.start));
-    html += `<mark style="color:${colorOf(s.label)};background:${colorOf(s.label)}22" data-start="${s.start}" title="${esc(s.label)} — click to remove">`
+    html += `<mark style="color:${colorOf(s.label)};background:${colorOf(s.label)}22" data-start="${s.start}" title="${esc(s.label)} - click to remove">`
          +  esc(d.text.slice(s.start, s.end))
          +  `<span class="tagname">${esc(s.label)}</span></mark>`;
     cursor = s.end;
@@ -287,7 +287,7 @@ function renderStats(){
       if(anns[d.id].some(a=>a.label===g.label && overlaps(a.start,a.end,gs,ge))) hit++;
     });
   });
-  el("s-agree").textContent = goldSeen ? Math.round(hit/goldSeen*100)+"%" : "—";
+  el("s-agree").textContent = goldSeen ? Math.round(hit/goldSeen*100)+"%" : "-";
 }
 
 function overlaps(a1,a2,b1,b2){ return a1 < b2 && b1 < a2; }
@@ -339,7 +339,7 @@ el("btn-export").onclick = ()=>{
       .map(a=>[a.start, a.end, a.label])
   }));
   const out = lines.join("\n");
-  el("jsonl").textContent = out || "Nothing annotated yet — mark a span first.";
+  el("jsonl").textContent = out || "Nothing annotated yet - mark a span first.";
   el("export-card").style.display = "block";
   el("export-card").scrollIntoView({behavior:"smooth", block:"nearest"});
   el("btn-copy").onclick = async e=>{

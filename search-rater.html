@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Search Relevance Rater — Waseem Ansari</title>
+<title>Search Relevance Rater - Waseem Ansari</title>
 <meta property="og:type" content="website">
 <meta property="og:site_name" content="Waseem Ahmad Ansari">
 <meta property="og:url" content="https://waseemwdd0165-jpg.github.io/search-rater.html">
@@ -170,7 +170,7 @@ const PQ = [
 const QUERIES = [
   {
     q:"how long to boil eggs soft",
-    locale:"en-IN · Mobile", type:"Know Simple",
+    locale:"en-IN - Mobile", type:"Know Simple",
     intent:"The user wants a specific cooking time for soft-boiled eggs. A Fully Meets result gives the number immediately, without requiring a click or a scroll past a life story.",
     results:[
       {url:"seriouseats.com/how-to-boil-eggs", title:"Soft-Boiled Eggs: 6 Minutes for a Runny Yolk",
@@ -178,7 +178,7 @@ const QUERIES = [
        flags:["Recipe site","Answer in title"]},
       {url:"reddit.com/r/Cooking/comments/soft_boiled_timing",
        title:"What's your go-to soft boil time? : r/Cooking",
-       snippet:"I do 6:30 every time. — Depends on your altitude honestly. — 7 minutes then ice bath, never fails me. — my grandmother said 5 and she was never wrong (37 comments)",
+       snippet:"I do 6:30 every time. - Depends on your altitude honestly. - 7 minutes then ice bath, never fails me. - my grandmother said 5 and she was never wrong (37 comments)",
        flags:["Forum","Conflicting answers"]},
       {url:"eggnutrition-council.example.org/health-benefits-of-eggs",
        title:"The Health Benefits of Eggs | Egg Nutrition Council",
@@ -192,33 +192,33 @@ const QUERIES = [
   },
   {
     q:"axis bank customer care number",
-    locale:"en-IN · Mobile", type:"Navigate / Visit-in-person",
-    intent:"The user wants the official contact number for a specific bank. Only the bank's own page can Fully Meet — an unofficial number here is a real-world harm, since callers may be phished.",
+    locale:"en-IN - Mobile", type:"Navigate / Visit-in-person",
+    intent:"The user wants the official contact number for a specific bank. Only the bank's own page can Fully Meet - an unofficial number here is a real-world harm, since callers may be phished.",
     results:[
       {url:"axisbank.com/contact-us", title:"Contact Us | Customer Care | Axis Bank",
        snippet:"24x7 Customer Care: 1860-419-5555 / 1860-500-5555. NRI Services, credit card blocking, and branch locator. Report fraud immediately on 1800-419-8933.",
        flags:["Official site","Complete"]},
       {url:"customercarenumbers-india.example.net/axis-bank-toll-free",
-       title:"Axis Bank Customer Care Number — All India Toll Free 2024",
+       title:"Axis Bank Customer Care Number - All India Toll Free 2024",
        snippet:"Axis Bank customer care number list for all states. Helpline: 1860-419-5555. Also find Axis Bank head office address, email id, and complaint number. Updated list of all bank helplines.",
        flags:["Aggregator","Unverified","Ad-heavy"]},
       {url:"axisbank.com/personal/accounts/savings-account",
-       title:"Savings Account — Open Online | Axis Bank",
+       title:"Savings Account - Open Online | Axis Bank",
        snippet:"Open a savings account online in minutes. Zero balance options available. Compare account types, interest rates, and debit card benefits.",
        flags:["Official site","Wrong page"]},
       {url:"complaint-forum.example.com/threads/axis-bank-never-answers",
-       title:"Axis bank customer care never answers — Consumer Complaints",
+       title:"Axis bank customer care never answers - Consumer Complaints",
        snippet:"I have been calling 1860-419-5555 for three days and nobody picks up. Anyone have a direct number for the Andheri branch? My account is frozen and I need help urgently.",
        flags:["Forum","User frustration"]}
     ]
   },
   {
     q:"is paracetamol safe in pregnancy",
-    locale:"en-IN · Mobile", type:"YMYL / Know",
+    locale:"en-IN - Mobile", type:"YMYL / Know",
     intent:"Your Money or Your Life query. Page Quality carries extra weight: expertise and authority of the source matter as much as whether the answer is correct. Rate a plausible-sounding answer from an unqualified source strictly.",
     results:[
       {url:"nhs.uk/medicines/paracetamol-for-adults/pregnancy",
-       title:"Paracetamol in pregnancy and breastfeeding — NHS",
+       title:"Paracetamol in pregnancy and breastfeeding - NHS",
        snippet:"Paracetamol is generally considered safe in pregnancy and is the first choice painkiller. Take the lowest dose that works, for the shortest time. Speak to a midwife or doctor if you need it for more than a few days.",
        flags:["Health authority","Reviewed content"]},
       {url:"mommyblog-natural.example.com/why-i-refuse-all-medication",
@@ -326,7 +326,7 @@ el("btn-export").onclick = ()=>{
       rows.push([Q.q, Q.locale, Q.type, ri+1, r.url, rt.nm||"", rt.pq||""]);
   }));
   const csv = rows.map(r=>r.map(c=>`"${String(c).replace(/"/g,'""')}"`).join(",")).join("\n");
-  el("csv").textContent = rows.length > 1 ? csv : "No ratings yet — rate a result first.";
+  el("csv").textContent = rows.length > 1 ? csv : "No ratings yet - rate a result first.";
   el("export-card").style.display = "block";
   el("export-card").scrollIntoView({behavior:"smooth", block:"nearest"});
   el("btn-copy").onclick = async e=>{
