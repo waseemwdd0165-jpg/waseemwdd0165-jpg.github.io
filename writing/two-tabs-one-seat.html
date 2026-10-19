@@ -23,9 +23,9 @@
 <body>
 <div class="wrap">
 
-<a class="back" href="../index.html#writing">&larr; Waseem Ansari</a>
+<a class="back" href="../index.html#writing">&lt;- Waseem Ansari</a>
 
-<p class="kicker">Chalk Runner &middot; reconnect</p>
+<p class="kicker">Chalk Runner - reconnect</p>
 <h1>Two tabs, one seat</h1>
 <p class="standfirst">The server holds a dropped player's seat for twenty-five
 seconds, and reconnect survived every phone, cable and lock screen I threw at it.
@@ -67,7 +67,7 @@ player who thinks they are two.</p>
 the same site reads and writes the same box. So tab two started up, found a key
 sitting there, and did exactly what I had told it to do: offered the key,
 claimed the seat, evicted the previous socket. The reconnect logic was not
-broken. It was working perfectly on a false premise &mdash; that a key in
+broken. It was working perfectly on a false premise - that a key in
 storage belongs to <em>this</em> client.</p>
 
 <h2>Why none of my tests caught it</h2>
@@ -81,8 +81,8 @@ people on two laptops, and it is precisely wrong about two tabs on one laptop,
 which is how nearly everyone tries a browser game for the first time.</p>
 
 <p>The test double was <strong>more isolated than reality</strong>. Every other
-kind of test double I had written that day erred the other way &mdash; sharing
-something the real thing would not share &mdash; and I had been watching for
+kind of test double I had written that day erred the other way - sharing
+something the real thing would not share - and I had been watching for
 that. I was not watching for a stub that granted my code an isolation the
 browser does not actually provide.</p>
 
@@ -91,7 +91,7 @@ browser does not actually provide.</p>
 <p>One word: <code>sessionStorage</code>.</p>
 
 <p>It is scoped to the tab. It survives a refresh, which is the case reconnect
-exists for. It does not survive closing the tab, which is correct &mdash; a
+exists for. It does not survive closing the tab, which is correct - a
 closed tab is not coming back, and holding its seat for twenty-five seconds
 would only make the next player wait.</p>
 
@@ -121,8 +121,8 @@ isolation that the real runtime never offered, and every test I wrote on top of
 it inherited the promise.</p>
 
 <div class="foot">
-  <a href="https://chalk-runner.waseemwdd0165.workers.dev/">Chalk Runner</a> &middot;
-  <a href="https://github.com/waseemwdd0165-jpg">GitHub</a> &middot;
+  <a href="https://chalk-runner.waseemwdd0165.workers.dev/">Chalk Runner</a> -
+  <a href="https://github.com/waseemwdd0165-jpg">GitHub</a> -
   <a href="../index.html">Portfolio</a>
 </div>
 

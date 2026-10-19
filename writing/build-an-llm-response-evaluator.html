@@ -23,16 +23,16 @@
 <body>
 <div class="wrap">
 
-<a class="back" href="../index.html#writing">&larr; Waseem Ansari</a>
+<a class="back" href="../index.html#writing">&lt;- Waseem Ansari</a>
 
-<p class="kicker">Tutorial · vanilla JavaScript</p>
+<p class="kicker">Tutorial - vanilla JavaScript</p>
 <h1>Build a browser-based LLM response evaluator in vanilla JavaScript</h1>
 <p class="standfirst">Side-by-side comparison, rubric scoring, agreement against a gold standard, JSONL export. One HTML file, no build step.</p>
 <div class="meta">Waseem Ahmad Ansari</div>
 
 <p>If you are fine-tuning a model with RLHF, somewhere in your pipeline a human looks at two responses and says which is better. That judgement, repeated thousands of times, becomes your preference dataset.</p>
 
-<p>This tutorial builds the tool that collects it. No framework, no build step, no server — one HTML file that runs from a local folder or a static host. By the end you will have side-by-side comparison, rubric scoring, keyboard shortcuts, agreement tracking against a gold standard, and JSONL export.</p>
+<p>This tutorial builds the tool that collects it. No framework, no build step, no server - one HTML file that runs from a local folder or a static host. By the end you will have side-by-side comparison, rubric scoring, keyboard shortcuts, agreement tracking against a gold standard, and JSONL export.</p>
 
 <p>I have built variations of this several times. The mechanics are simple. The decisions that make it <em>usable</em> are where the work is, so I will flag those as we go.</p>
 
@@ -62,7 +62,7 @@ const TASKS = [
 
 <p>Two things here are deliberate.</p>
 
-<p>**The rubric criteria carry a <code>desc</code>.** A criterion named "Helpfulness" with no definition produces noise, because every rater reads it differently. The description is not decoration — it is the thing that makes two raters agree.</p>
+<p>**The rubric criteria carry a <code>desc</code>.** A criterion named "Helpfulness" with no definition produces noise, because every rater reads it differently. The description is not decoration - it is the thing that makes two raters agree.</p>
 
 <p>**Each task carries a <code>gold</code> verdict and a reason.** This is what turns a collection tool into a calibration tool. More on that below.</p>
 
@@ -117,7 +117,7 @@ function record() {
   }[c]));
 }</code></pre>
 
-<p>The word count in the header is not filler. Length bias is real — raters favour longer responses — and showing the number makes the bias visible to the person about to be affected by it.</p>
+<p>The word count in the header is not filler. Length bias is real - raters favour longer responses - and showing the number makes the bias visible to the person about to be affected by it.</p>
 
 <h2>Events: delegate, do not attach</h2>
 
@@ -193,7 +193,7 @@ const pct = done.length ? Math.round(agree / done.length * 100) : 0;</code></pre
 
 <h2>Export</h2>
 
-<p>JSONL — one object per line — because that is what training pipelines consume.</p>
+<p>JSONL - one object per line - because that is what training pipelines consume.</p>
 
 <pre><code>const jsonl = TASKS
   .filter(t =&gt; results[t.id]?.verdict)
@@ -215,7 +215,7 @@ const pct = done.length ? Math.round(agree / done.length * 100) : 0;</code></pre
   })
   .join(&quot;\n&quot;);</code></pre>
 
-<p>Keep ties as an explicit <code>tie: true</code> with <code>chosen: null</code> rather than dropping them. A tie is a real signal — it says the two responses were genuinely equivalent — and pipelines that silently discard them lose that.</p>
+<p>Keep ties as an explicit <code>tie: true</code> with <code>chosen: null</code> rather than dropping them. A tie is a real signal - it says the two responses were genuinely equivalent - and pipelines that silently discard them lose that.</p>
 
 <h2>What I would add next</h2>
 
@@ -223,7 +223,7 @@ const pct = done.length ? Math.round(agree / done.length * 100) : 0;</code></pre
 
 <p><strong>Timing.</strong> Record seconds per item. Ratings made in four seconds are usually worth less than ratings made in forty, and the distribution tells you a lot about whether people are actually reading.</p>
 
-<p><strong>Free-text reasons on disagreement.</strong> When a rater differs from gold, one sentence explaining why is the most valuable data in the whole session — it is where you find out your rubric is ambiguous.</p>
+<p><strong>Free-text reasons on disagreement.</strong> When a rater differs from gold, one sentence explaining why is the most valuable data in the whole session - it is where you find out your rubric is ambiguous.</p>
 
 <h2>Try it</h2>
 
@@ -231,11 +231,11 @@ const pct = done.length ? Math.round(agree / done.length * 100) : 0;</code></pre
 
 <hr>
 
-<p><em>I build software and I evaluate it — nine years as a software engineer, seven evaluating search and AI systems. <a href="https://waseemwdd0165-jpg.github.io">waseemwdd0165-jpg.github.io</a></em></p>
+<p><em>I build software and I evaluate it - nine years as a software engineer, seven evaluating search and AI systems. <a href="https://waseemwdd0165-jpg.github.io">waseemwdd0165-jpg.github.io</a></em></p>
 
 <div class="foot">
-  <a href="https://waseemwdd0165-jpg.github.io/">Portfolio</a> &middot;
-  <a href="https://github.com/waseemwdd0165-jpg">GitHub</a> &middot;
+  <a href="https://waseemwdd0165-jpg.github.io/">Portfolio</a> -
+  <a href="https://github.com/waseemwdd0165-jpg">GitHub</a> -
   <a href="https://www.linkedin.com/in/waseem-ahmad-ansari-bba5771ab/">LinkedIn</a>
 </div>
 

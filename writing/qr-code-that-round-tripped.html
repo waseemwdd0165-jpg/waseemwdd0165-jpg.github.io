@@ -23,12 +23,12 @@
 <body>
 <div class="wrap">
 
-<a class="back" href="../index.html#writing">&larr; Waseem Ansari</a>
+<a class="back" href="../index.html#writing">&lt;- Waseem Ansari</a>
 
-<p class="kicker">Chalk Runner &middot; QR from scratch</p>
+<p class="kicker">Chalk Runner - QR from scratch</p>
 <h1>The QR code that round-tripped and still could not be scanned</h1>
 <p class="standfirst">No library, no build step: a QR encoder written from scratch
-inside a Cloudflare Worker, Reed&ndash;Solomon error correction and all. It
+inside a Cloudflare Worker, Reed-Solomon error correction and all. It
 round-tripped perfectly through my own decoder, and no phone could read it.</p>
 <div class="meta">Waseem Ahmad Ansari</div>
 
@@ -38,7 +38,7 @@ phone at it and be in the next round. The game runs on a Cloudflare Worker with
 no build step and no npm, so pulling in a QR library was not an option. I wrote
 the encoder.</p>
 
-<p>That is more work than it sounds. A QR code is a Reed&ndash;Solomon codeword
+<p>That is more work than it sounds. A QR code is a Reed-Solomon codeword
 laid out in a square. You need arithmetic in the Galois field GF(256), a
 generator polynomial for the number of error-correction bytes your version
 needs, the data laid out along a snaking path, one of eight mask patterns
@@ -56,10 +56,10 @@ Every one passed. I put a code on the card and moved on.</p>
 <p>The next morning something bothered me about how easy that had been, so I
 added one more assertion that had nothing to do with my decoder.</p>
 
-<p>A Reed&ndash;Solomon codeword has an algebraic property that does not depend
+<p>A Reed-Solomon codeword has an algebraic property that does not depend
 on anybody's implementation: evaluate the finished codeword at the successive
-powers of the field's generator element, and every one of those values &mdash;
-the syndromes &mdash; must be zero. That is what makes it a codeword rather than
+powers of the field's generator element, and every one of those values -
+the syndromes - must be zero. That is what makes it a codeword rather than
 an arbitrary string of bytes. It is the property a scanner leans on to repair a
 code with a thumb over the corner of it.</p>
 
@@ -101,7 +101,7 @@ scanned.</p>
 
 <p><strong>A round trip through your own code is not a test of correctness.</strong>
 It is a test that two of your functions share an interpretation. That is worth
-knowing &mdash; it catches typos and off-by-ones &mdash; but a shared
+knowing - it catches typos and off-by-ones - but a shared
 misunderstanding passes it every single time, and a shared misunderstanding is
 exactly what you get when the same person writes both halves in the same
 afternoon.</p>
@@ -110,7 +110,7 @@ afternoon.</p>
 implementation you also wrote. Something the specification asserts that you can
 check independently: an invariant, a published test vector, a checksum, a real
 client. The syndrome check qualifies because it is an algebraic fact about
-Reed&ndash;Solomon codes, and it holds whether or not my encoder is any good.
+Reed-Solomon codes, and it holds whether or not my encoder is any good.
 The best tests in that file now are the ones that would fail even if I had
 written the decoder wrong in the identical way.</p>
 
@@ -124,8 +124,8 @@ question the feature actually asks, which is not "is this a valid codeword" but
 trips, the syndromes, and a camera.</p>
 
 <div class="foot">
-  <a href="https://chalk-runner.waseemwdd0165.workers.dev/">Chalk Runner</a> &middot;
-  <a href="https://github.com/waseemwdd0165-jpg">GitHub</a> &middot;
+  <a href="https://chalk-runner.waseemwdd0165.workers.dev/">Chalk Runner</a> -
+  <a href="https://github.com/waseemwdd0165-jpg">GitHub</a> -
   <a href="../index.html">Portfolio</a>
 </div>
 

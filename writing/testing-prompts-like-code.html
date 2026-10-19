@@ -23,9 +23,9 @@
 <body>
 <div class="wrap">
 
-<a class="back" href="../index.html#writing">&larr; Waseem Ansari</a>
+<a class="back" href="../index.html#writing">&lt;- Waseem Ansari</a>
 
-<p class="kicker">Tutorial · prompt engineering</p>
+<p class="kicker">Tutorial - prompt engineering</p>
 <h1>Test your prompts like you test your code</h1>
 <p class="standfirst">Version the artifact, fix a test set, run every version against it, compare. We solved this for code thirty years ago.</p>
 <div class="meta">Waseem Ahmad Ansari</div>
@@ -42,7 +42,7 @@
 
 <p>Three pieces:</p>
 
-<ol><li><strong>A versioned prompt</strong> — each revision pinned, never edited in place</li><li><strong>A fixed test set</strong> — the same inputs for every version, including the nasty ones</li><li><strong>Automatic checks</strong> — deterministic assertions over the output</li></ol>
+<ol><li><strong>A versioned prompt</strong> - each revision pinned, never edited in place</li><li><strong>A fixed test set</strong> - the same inputs for every version, including the nasty ones</li><li><strong>Automatic checks</strong> - deterministic assertions over the output</li></ol>
 
 <p>The third is what makes it engineering rather than vibes. If checking a version requires a human to read five responses and form an opinion, you will not do it on every change.</p>
 
@@ -98,7 +98,7 @@
       return !!j &amp;&amp; (j.reply || &quot;&quot;).trim().split(/\s+/).length &lt; 45; } }
 ];</code></pre>
 
-<p>Note what these check. Not "is the reply good" — that needs a human. They check properties that are objectively true or false: valid JSON, required fields, a value inside an enum, absence of a phrase, a length bound.</p>
+<p>Note what these check. Not "is the reply good" - that needs a human. They check properties that are objectively true or false: valid JSON, required fields, a value inside an enum, absence of a phrase, a length bound.</p>
 
 <p>You can assert far more than people expect. Format, schema, enums, forbidden terms, length, required disclaimers, refusal presence or absence. Most of what actually goes wrong in production is mechanical.</p>
 
@@ -114,12 +114,12 @@ and write a friendly reply.</code></pre>
 Urgency: Normal
 
 Hi there! I can see you&#x27;ve been charged twice for order #88213. I&#x27;ll get
-that refunded for you right away — you should see the money back in 3-5
+that refunded for you right away - you should see the money back in 3-5
 business days. Sorry for the trouble!</code></pre>
 
 <p>Reads well. Fails four of five checks.</p>
 
-<p>It is prose, not JSON. There is no schema. And the assistant just promised a refund it has no authority to issue — a support agent doing that would be a serious problem, and the model does it cheerfully.</p>
+<p>It is prose, not JSON. There is no schema. And the assistant just promised a refund it has no authority to issue - a support agent doing that would be a serious problem, and the model does it cheerfully.</p>
 
 <p>Case 3, the injection, is worse: the model approves the refund <em>and</em> explains its own instructions when asked.</p>
 
@@ -185,13 +185,13 @@ Categorise the customer message, set urgency, and draft a reply.</code></pre>
 <table>
 <thead><tr><th>Version</th><th>Fix</th><th>What it addresses</th></tr></thead>
 <tbody>
-<tr><td>v1 → v2</td><td>Output schema</td><td>Shape. Parsing, fields, enums.</td></tr>
-<tr><td>v2 → v3</td><td>Authority limits</td><td>Judgement. What the model may claim.</td></tr>
-<tr><td>v2 → v3</td><td>Data/instruction boundary</td><td>Trust. What counts as input.</td></tr>
+<tr><td>v1 -> v2</td><td>Output schema</td><td>Shape. Parsing, fields, enums.</td></tr>
+<tr><td>v2 -> v3</td><td>Authority limits</td><td>Judgement. What the model may claim.</td></tr>
+<tr><td>v2 -> v3</td><td>Data/instruction boundary</td><td>Trust. What counts as input.</td></tr>
 </tbody>
 </table>
 
-<p>A schema will never fix an authority problem. An authority rule will never fix a parsing problem. If you cannot tell which kind of failure you are looking at, you will keep applying the wrong fix — which is what "prompt engineering by tweaking" mostly consists of.</p>
+<p>A schema will never fix an authority problem. An authority rule will never fix a parsing problem. If you cannot tell which kind of failure you are looking at, you will keep applying the wrong fix - which is what "prompt engineering by tweaking" mostly consists of.</p>
 
 <h2>Building the harness</h2>
 
@@ -217,11 +217,11 @@ function passRate(v) {
 
 <pre><code>function safe(fn) { try { return fn(); } catch (e) { return false; } }</code></pre>
 
-<p>Recording outputs rather than calling an API live makes the comparison reproducible and lets the harness run with no key. For live work you would swap <code>v.outputs[c.id]</code> for an API call and cache the result — but keep the cache, because a version's score should not drift underneath you.</p>
+<p>Recording outputs rather than calling an API live makes the comparison reproducible and lets the harness run with no key. For live work you would swap <code>v.outputs[c.id]</code> for an API call and cache the result - but keep the cache, because a version's score should not drift underneath you.</p>
 
 <h2>Where this stops working</h2>
 
-<p>Automatic checks cover mechanical properties. They cannot tell you whether the reply is <em>good</em> — whether the tone fits, whether it is genuinely helpful, whether a customer would feel heard.</p>
+<p>Automatic checks cover mechanical properties. They cannot tell you whether the reply is <em>good</em> - whether the tone fits, whether it is genuinely helpful, whether a customer would feel heard.</p>
 
 <p>That still needs human evaluation. But the two compose well: automatic checks run on every change and catch regressions in seconds, and humans review only the versions that pass. Nobody should be reading responses from a version that does not return valid JSON.</p>
 
@@ -231,11 +231,11 @@ function passRate(v) {
 
 <hr>
 
-<p><em>I build software and I evaluate it — nine years as a software engineer, seven evaluating search and AI systems. <a href="https://waseemwdd0165-jpg.github.io">waseemwdd0165-jpg.github.io</a></em></p>
+<p><em>I build software and I evaluate it - nine years as a software engineer, seven evaluating search and AI systems. <a href="https://waseemwdd0165-jpg.github.io">waseemwdd0165-jpg.github.io</a></em></p>
 
 <div class="foot">
-  <a href="https://waseemwdd0165-jpg.github.io/">Portfolio</a> &middot;
-  <a href="https://github.com/waseemwdd0165-jpg">GitHub</a> &middot;
+  <a href="https://waseemwdd0165-jpg.github.io/">Portfolio</a> -
+  <a href="https://github.com/waseemwdd0165-jpg">GitHub</a> -
   <a href="https://www.linkedin.com/in/waseem-ahmad-ansari-bba5771ab/">LinkedIn</a>
 </div>
 
